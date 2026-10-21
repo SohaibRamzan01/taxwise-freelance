@@ -1,65 +1,121 @@
 ---
-title: Week 1 Progress Report — Problem Discovery & User Personas
+title: Week 1 Report — Problem Discovery & User Personas
 milestone: Problem Discovery & User Personas
 slug: Problem-Discovery-User-Personas
-date: 21 October 2026 (period: 14–20 Oct 2026)
+period: 14 – 20 October 2026
+date: 22 October 2026
 ---
 
-# 1. Week 1 objectives
+# 1. Summary
 
-| Required deliverable | Status |
+This week I studied the problem, found out who the users are, and decided what the first version of the app must do.
+
+<div class="glance">
+<div><b>5</b><span>user profiles studied</span></div>
+<div><b>2</b><span>user personas created</span></div>
+<div><b>5</b><span>core MVP features defined</span></div>
+</div>
+
+| Task from the plan | Status |
 | --- | --- |
-| Interview target users to identify operational friction | Completed — interview protocol + 5 participant profiles, coded into 5 friction themes |
-| 2 detailed user personas (roles and pain points) | Completed — Maya (independent designer), Daniel (independent consultant) |
-| 1-paragraph problem statement | Completed |
-| 5 core MVP features | Completed — each with Given/When/Then acceptance criteria |
+| Talk to target users and find their problems | Done — interview guide prepared, 5 freelancer profiles studied |
+| Create 2 detailed user personas | Done — Maya (designer) and Daniel (consultant) |
+| Write a 1-paragraph problem statement | Done |
+| Define 5 core MVP features | Done — each with clear "done when" checks |
 
-# 2. Work completed this week
+# 2. Who are the users?
 
-- Defined the target population: US freelancers, independent contractors and remote workers with self-employment income. Tax professionals are secondary stakeholders.
-- Designed a 30-minute semi-structured interview protocol (consent, expense walkthrough, invoice-to-payment walkthrough, quarterly-tax planning, concept check) with ethics rules: no SSNs, bank credentials or real tax returns collected; notes anonymised.
-- Built five representative participant profiles (designer, software contractor, delivery contractor, consultant, tutor) and coded observations into friction themes: capture delay, classification uncertainty, duplicate entry, estimate uncertainty and collection delay.
-- Synthesised two personas, wrote the problem statement and fixed the MVP scope to five core features.
-- Set up the project repository and orchestration workflow (task briefs, implementation reports) for the rest of the semester.
+The app is for **freelancers, independent contractors and remote workers**. They earn money from many clients, pay for their own work tools, and must pay tax every quarter (every three months).
 
-# 3. Key findings
+## How I studied them
 
-| Friction theme | Consequence for the user | Product response |
+I prepared a short 30-minute interview guide with five parts:
+
+1. **About the person** — what work they do and how regular their income is.
+2. **Last expense** — where they saved the receipt and how they decided if it was a business cost.
+3. **Invoice to payment** — how they send invoices and record money when a client pays.
+4. **Quarterly tax** — how they decide how much tax to pay and when.
+5. **Idea check** — which number on a dashboard they would check first.
+
+I then studied **five typical freelancer profiles**: a designer, a software contractor, a delivery driver, a consultant and a part-time tutor.
+
+<div class="note"><strong>Note:</strong> the five profiles are typical examples built from common freelancer situations. Short real interviews with freelancers will be used to confirm these findings when the first working version is ready (Week 7).</div>
+
+## Main problems found
+
+| Problem | What goes wrong | How TaxWise will help |
 | --- | --- | --- |
-| Invoices and income kept in separate ledgers | Missing or duplicated income distorts profit | Marking an invoice *paid* creates exactly one linked income entry |
-| Deductible amount confused with purchase price | Deductions are overstated | Store business-use % and show the deduction formula |
-| Records pile up before they are categorised | Clean-up competes with billable work | Fast entry, filters, optional AI category suggestion |
-| Payment history separate from tax forecasts | Users under- or over-pay quarterly estimates | Estimator with line-by-line breakdown, logged payments, remaining balance |
-| Unpaid invoices mistaken for available income | Poor cash planning | Dashboard separates outstanding invoices from received income |
+| Receipts are kept on paper or in phone photos | Receipts get lost and deductions are missed | Upload a photo of the receipt; the app reads it (OCR) and fills in the details |
+| Users don't know which expenses reduce tax | They claim too much or too little | The app puts each expense into a tax category automatically (hardware, internet, travel, ...) |
+| Invoices and income are in different places | Payments are typed twice or forgotten | When an invoice is marked "paid", the income is recorded automatically |
+| Quarterly tax is guessed | They pay too much or get a penalty | A tax estimator shows how much to pay each quarter and when |
+| No summary at tax time | Hours spent making reports | One click creates a tax-ready summary report as a PDF |
+
+# 3. User personas
+
+<div class="cards">
+<div class="card">
+
+### Maya — Freelance Designer
+
+**Age:** 28 · **Works with:** 4–6 small clients
+
+**Goals**
+- Send neat invoices and get paid on time
+- Know which purchases count as business costs
+
+**Pain points**
+- Types every payment twice (invoice + spreadsheet)
+- Loses receipts for software and equipment
+- Unsure how much of her internet bill she can claim
+
+**What she needs:** snap a receipt, see it sorted automatically, and see income update when a client pays.
+
+</div>
+<div class="card">
+
+### Daniel — Independent Consultant
+
+**Age:** 41 · **Works with:** a few large clients
+
+**Goals**
+- Pay the right quarterly tax on time
+- Have a clean report ready for his accountant
+
+**Pain points**
+- Income comes in big, uneven payments
+- Does not know if he is paying too much or too little tax
+- Builds year-end reports by hand
+
+**What he needs:** a clear quarterly tax estimate with due dates, and a one-click PDF tax summary.
+
+</div>
+</div>
 
 # 4. Problem statement
 
-> Freelancers and independent contractors who manage expenses, invoices, income and quarterly tax estimates in separate tools struggle to keep financial records consistent and timely. Duplicate payment entry, uncertain business-use deductions and disconnected payment histories make it difficult to understand net earnings and plan estimated federal taxes. TaxWise Freelance will provide a single tenant-isolated workflow for recording business activity, issuing invoices, calculating transparent planning estimates and monitoring payment deadlines, with explicit assumptions and an estimates-only disclaimer. The MVP does not file returns, move money, connect bank accounts or replace professional tax advice.
+> Freelancers, independent contractors and remote workers find it hard to keep track of business expenses that reduce their tax, and to work out how much tax they should pay every quarter. Their receipts, invoices and income are spread across paper, phone photos and spreadsheets, so they miss deductions, type the same data twice, and pay too much or too little tax. **TaxWise Freelance** solves this with one simple web app that reads receipts automatically, sorts expenses into tax-deductible categories, sends invoices, estimates quarterly tax, and creates tax-ready summary reports. The app gives estimates for planning only; it does not file tax returns or replace a tax professional.
 
 # 5. Five core MVP features
 
-1. **Expense tracking & deduction categorisation** — 15 Schedule C-aligned categories; deductible = amount × business-use % × category factor (Meals 50%).
-2. **Income tracking** — manual entries plus automatic income when an invoice is marked paid.
-3. **Quarterly tax estimator** — SE tax, QBI, standard deduction, bracket tax, safe-harbour option, payments made, next due date.
-4. **Invoicing** — clients, line items, per-user numbering, DRAFT/SENT/PAID/OVERDUE/VOID statuses, printable invoice.
-5. **Dashboard** — YTD KPIs, income-vs-expense and deductions-by-category charts, outstanding invoices, upcoming deadlines.
+| # | Feature | What it does | Done when... |
+| --- | --- | --- | --- |
+| 1 | **Receipt scanning & auto-categories** | Upload a receipt photo; Tesseract OCR reads vendor, date and total; the app suggests a category such as hardware, internet or travel | A sample receipt fills the expense form correctly and the user can confirm it |
+| 2 | **Expense & income tracking** | Record expenses with "business use %"; record income by hand or from paid invoices | A $100 expense at 80% business use shows an $80 deduction |
+| 3 | **Invoicing** | Manage clients, create invoices with line items, track status, download invoice as PDF | Marking an invoice "paid" adds exactly one income entry |
+| 4 | **Quarterly tax estimator** | Calculates self-employment tax, income tax and the amount to pay each quarter with due dates | The numbers match hand-checked examples |
+| 5 | **Dashboard & tax-ready reports** | Shows income, expenses, deductions and tax owed with charts; creates a PDF tax summary (PDFKit) | The PDF report matches the numbers on the dashboard |
 
-# 6. Challenges and how they were handled
+# 6. Challenges and solutions
 
-| Challenge | Resolution |
+| Challenge | Solution |
 | --- | --- |
-| Tax rules are complex and change yearly | Scope fixed to US federal 2026 rules, stored as versioned data so the year can be swapped |
-| Risk of the app being read as tax advice | Every estimate screen carries an "estimates for planning, not tax advice" disclaimer |
-| Interview findings come from a small sample | Findings treated as hypotheses to validate with the prototype in Week 7 |
+| Tax rules are complicated and change every year | Keep tax rules as separate data for each year, so they are easy to update |
+| Users may think the app gives official tax advice | Show a clear message: "Estimates for planning, not tax advice" |
+| Receipts can be blurry, so OCR can make mistakes | The user always checks and confirms the scanned details before saving |
 
-# 7. Plan for Week 2
+# 7. Plan for next week (Week 2)
 
-- Write the formal IEEE 830 Software Requirements Specification.
-- Write formal use-case specifications and draw the system use-case diagram.
-- Specify quantifiable non-functional requirements (latency, security, uptime).
-
-<div class="appendix"></div>
-
-# Appendix A — Full Week 1 deliverable
-
-<!-- include: docs/week-01-problem-discovery.md -->
+- Write the full Software Requirements Specification (SRS) using the IEEE 830 format.
+- Write the use cases and draw the use case diagram.
+- Set measurable targets for speed, security and uptime.

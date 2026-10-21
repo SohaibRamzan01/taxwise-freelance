@@ -1,9 +1,12 @@
 {
+  "university": "PTUT — Final Year Project",
   "projectId": "PTUT-PRJ-042",
-  "projectTitle": "TaxWise Freelance – Automated Tax Deductions & Invoicing Platform",
-  "domain": "5. FinTech, Personal Wealth & Micro-Finance",
-  "student": "",
-  "rollNo": "",
-  "advisor": "",
+  "projectTitle": "TaxWise Freelance",
+  "projectSubtitle": "Automated Tax Deductions & Invoicing Platform",
+  "domain": "FinTech, Personal Wealth & Micro-Finance",
+  "student": "Muhammad Sohaib Ramzan",
+  "supervisor": "Dr. Zaigham Mushtaq",
+  "department": "Software Engineering Technology",
+  "section": "A",
   "repo": "github.com/SohaibRamzan01/taxwise-freelance"
 }
