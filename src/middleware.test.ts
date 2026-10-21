@@ -3,10 +3,13 @@ import { NextRequest } from "next/server";
 
 const verify = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/auth/token", () => ({ SESSION_COOKIE: "taxwise_session", verifySession: verify }));
-import { middleware } from "./middleware";
+import { config, middleware } from "./middleware";
 
 beforeEach(() => vi.resetAllMocks());
 describe("protected route middleware", () => {
+  it("includes the estimated payment workspace in the protected matcher", () => {
+    expect(config.matcher).toContain("/estimated-payments/:path*");
+  });
   it("redirects missing or invalid sessions to login with a return path", async () => {
     let response = await middleware(new NextRequest("http://localhost/expenses"));
     expect(response.headers.get("location")).toBe("http://localhost/login?next=%2Fexpenses");

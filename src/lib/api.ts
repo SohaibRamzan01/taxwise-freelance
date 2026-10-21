@@ -1,11 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-
-export class ApiError extends Error {
-  constructor(public status: number, public code: string, message: string, public details?: unknown) {
-    super(message);
-  }
-}
+import { ApiError } from "./errors";
+export { ApiError } from "./errors";
 
 export function errorResponse(error: unknown) {
   if (error instanceof z.ZodError) {

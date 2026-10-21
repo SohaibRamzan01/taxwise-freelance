@@ -1,0 +1,18 @@
+export const categories = {
+  ADVERTISING: { label: "Advertising", scheduleC: "8", factorBasisPoints: 10000 },
+  CAR_AND_TRUCK: { label: "Car & truck", scheduleC: "9", factorBasisPoints: 10000 },
+  CONTRACT_LABOR: { label: "Contract labor", scheduleC: "11", factorBasisPoints: 10000 },
+  INSURANCE: { label: "Insurance", scheduleC: "15", factorBasisPoints: 10000 },
+  LEGAL_AND_PROFESSIONAL: { label: "Legal & professional", scheduleC: "17", factorBasisPoints: 10000 },
+  OFFICE_EXPENSE: { label: "Office expense", scheduleC: "18", factorBasisPoints: 10000 },
+  RENT_AND_LEASE: { label: "Rent / lease", scheduleC: "20", factorBasisPoints: 10000 },
+  SUPPLIES: { label: "Supplies", scheduleC: "22", factorBasisPoints: 10000 },
+  TRAVEL: { label: "Travel", scheduleC: "24a", factorBasisPoints: 10000 },
+  MEALS: { label: "Meals", scheduleC: "24b", factorBasisPoints: 5000 },
+  UTILITIES: { label: "Utilities", scheduleC: "25", factorBasisPoints: 10000 },
+  SOFTWARE_AND_SUBSCRIPTIONS: { label: "Software & subscriptions", scheduleC: "27a", factorBasisPoints: 10000 },
+  HOME_OFFICE: { label: "Home office", scheduleC: "30", factorBasisPoints: 10000 },
+  EDUCATION: { label: "Education", scheduleC: "27a", factorBasisPoints: 10000 },
+  OTHER: { label: "Other", scheduleC: "27a", factorBasisPoints: 10000 },
+} as const;
+export type ExpenseCategory = keyof typeof categories;

@@ -1,3 +1,3 @@
-import { PlaceholderPage } from "@/components/placeholder-page";
+import { SettingsPage } from "@/components/domain/settings";
 export const metadata = { title: "Settings" };
-export default function Page() { return <PlaceholderPage section="settings" />; }
+export default function Page() { return <SettingsPage />; }

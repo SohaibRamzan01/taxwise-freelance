@@ -1,8 +1,8 @@
 # TaxWise Freelance
 
 A workspace for freelancers to organize business expenses, track income, invoice clients,
-and plan US federal quarterly taxes. This scaffold provides authentication, a complete
-product database schema, and responsive pages. Domain pages are placeholders for later tasks.
+and plan US federal quarterly taxes. Includes authenticated, tenant-scoped ledgers,
+client and invoice management, a quarterly estimator, and a responsive dashboard.
 
 Built with Next.js App Router, strict TypeScript, React, Tailwind CSS, PostgreSQL,
 Prisma 7 with the PostgreSQL driver adapter, bcrypt, jose, Zod, and Vitest.
@@ -71,8 +71,8 @@ Keep `.env` private. The checked-in `.env.example` contains no credentials for d
   `requireAdmin()` and scope domain queries by that user's `id`.
 - `prisma/schema.prisma`: all domain rows include indexed `userId`; composite foreign
   keys prevent invoices, items, and linked income from referencing another user's rows.
-  Invoice numbers are unique per user. Allocate `nextInvoiceNumber` transactionally in
-  future invoice handlers. Money uses integer cents (`Int`, maximum $21,474,836.47 per field);
+  Invoice numbers are unique per user. The invoice service allocates `nextInvoiceNumber`
+  transactionally. Money uses integer cents (`Int`, maximum $21,474,836.47 per field);
   percentage tax rates use basis points and line-item quantities use Decimal.
 - `GET /api/health`: returns app/database status; HTTP 503 when the DB is unavailable.
 
@@ -92,5 +92,57 @@ Security headers are set in `next.config.ts`, including CSP, frame denial, MIME 
 referrer/permissions policies, and production HSTS. CSP allows Next.js inline hydration
 scripts and inline styles; eval and WebSockets are allowed only in development.
 
-Tax estimates are for planning purposes and are not tax advice. The tax engine and
-domain CRUD are intentionally left for subsequent tasks.
+## Domain API and workspace
+
+`/expenses`, `/income`, `/clients`, and `/invoices` provide searchable, paginated ledgers
+with add/edit dialogs. Invoice line totals, discounts, and taxes are calculated on the
+server. Draft invoices can be marked sent, then paid; sent status does not send email.
+Paid invoices create exactly one linked income entry. Un-paying, voiding, or deleting an
+invoice removes its linked income. Reopen a paid/void invoice before editing its contents.
+`/invoices/[id]/print` provides print CSS for the browser's Save as PDF feature.
+
+Collection endpoints: `/api/expenses`, `/api/income`, `/api/clients`, `/api/invoices`, and
+`/api/estimated-payments` support GET/POST; append `/[id]` for GET/PATCH/DELETE.
+All require a session; mutations also require the configured Origin header. Request
+money is integer cents, dates are `YYYY-MM-DD`, invoice quantities allow four decimals,
+and tax rates are integer basis points. Invoice POST accepts clientId, issueDate, dueDate,
+items (`description`, `quantity`, `unitPriceCents`), discountCents, taxRateBasisPoints,
+notes, and terms. PATCH also accepts status and optional paidAt (a date).
+Linked income cannot be edited or deleted directly.
+
+Lists accept `search`, `from`, `to`, `sort`, `direction=asc|desc`, `page`, and `pageSize`
+(maximum 100). Expenses also accept `category`; invoices accept effective `status`;
+payments accept `year` and `quarter`. Sort fields are allowlisted per entity in
+`src/lib/domain/service.ts`. Responses contain `data` and `pagination`; single-record
+responses contain `data`. Delete operations and their audit records share a transaction.
+
+`GET /api/tax/estimate?year=2026&annualise=true` returns the calculation breakdown,
+quarterly schedule, and recorded payments. Optional `asOf=YYYY-MM-DD` selects a historical
+snapshot through today. `GET /api/dashboard` returns YTD KPIs, monthly series, category
+deductions, outstanding invoices, and deadlines. `GET/PATCH /api/settings` reads/updates
+the tax/business profile without exposing authentication fields.
+
+The pure engine in `src/lib/tax` accepts versioned jurisdiction/year rule objects.
+Only 2026 US federal rules and USD are currently exposed in the API and UI. Annualisation
+uses inclusive elapsed UTC calendar days, capped at the full year; actual-YTD mode is
+available. Round monetary lines half up to integer cents. QBI uses the simplified
+below-threshold model. The regular quarterly target is 100% of projected annual tax;
+when safe harbour is enabled, use the lower of this and 100%/110% of prior-year tax.
+Any remainder cents go to later installments. The schedule carries prior-quarter
+overpayments forward and excludes future-dated payments from paid-so-far totals.
+
+Tax estimates are for planning purposes and are not tax advice. W-2 wages, withholding,
+credits, capital gains, and state/local taxes are outside this model.
+
+For a local live HTTP smoke test, start the app with APP_URL matching its localhost
+origin and DATABASE_URL pointing to your local database, then run:
+
+```sh
+node scripts/smoke-domain.mjs
+```
+
+Set `SMOKE_APP_URL` if not using port 3000. The script creates disposable accounts,
+checks signup → client → invoice → paid income → expense → estimate, then checks CRUD,
+tenant isolation, validation, profile/dashboard/print routes, and delete audit records.
+It removes only its own test accounts/data afterward; it refuses non-local app/database
+hosts. The server and script must use the same database.

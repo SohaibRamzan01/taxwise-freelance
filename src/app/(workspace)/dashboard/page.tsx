@@ -1,6 +1,3 @@
-import { ChartNoAxesCombined, ArrowDownLeft, ReceiptText, CircleDollarSign, Calculator, Info } from "lucide-react";
-
+import { DashboardPage } from "@/components/domain/dashboard";
 export const metadata = { title: "Dashboard" };
-export default function DashboardPage() {
-  return <><header className="page-title"><span className="eyebrow">A fresh perspective</span><h1>Your business, in focus.</h1><p>Make room for good work. We’ll help you see the bigger picture.</p></header><div className="stats-grid">{[{ label: "YTD income", Icon: ArrowDownLeft }, { label: "YTD expenses", Icon: ReceiptText }, { label: "Potential deductions", Icon: CircleDollarSign }, { label: "Estimated tax", Icon: Calculator }].map(({ label, Icon }) => <div className="stat" key={label}><div className="stat-label"><Icon size={15} />{label}</div><div className="stat-value">—</div><small>Overview coming soon</small></div>)}</div><section className="empty-panel"><span className="empty-icon"><ChartNoAxesCombined size={30} /></span><h2>A clearer picture is on its way.</h2><p>Your income, expenses, outstanding invoices, and upcoming tax deadlines will come together here.</p><span className="pill">Your workspace is ready</span></section><p className="disclaimer"><Info size={14} />Tax estimates are for planning purposes and are not tax advice.</p></>;
-}
+export default function Page() { return <DashboardPage />; }

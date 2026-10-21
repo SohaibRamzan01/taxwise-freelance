@@ -15,4 +15,4 @@ export async function middleware(request: NextRequest) {
   return NextResponse.next();
 }
 
-export const config = { matcher: ["/dashboard/:path*", "/expenses/:path*", "/income/:path*", "/invoices/:path*", "/clients/:path*", "/tax-estimator/:path*", "/settings/:path*", "/admin/:path*"] };
+export const config = { matcher: ["/dashboard/:path*", "/expenses/:path*", "/income/:path*", "/invoices/:path*", "/clients/:path*", "/tax-estimator/:path*", "/estimated-payments/:path*", "/settings/:path*", "/admin/:path*"] };

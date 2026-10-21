@@ -23,7 +23,7 @@ export function AppShell({ user, children }: { user: { name: string; role: "USER
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   const links = user.role === "ADMIN" ? [...navigation, { href: "/admin", label: "Admin", Icon: ShieldCheck }] : navigation;
-  const current = links.find(link => pathname.startsWith(link.href))?.label ?? "Workspace";
+  const current = pathname.startsWith("/estimated-payments") ? "Estimated payments" : links.find(link => pathname.startsWith(link.href))?.label ?? "Workspace";
   async function logout() {
     setPending(true); setError("");
     try {
