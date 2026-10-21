@@ -20,12 +20,12 @@ export function assertSameOrigin(request: Request) {
   if (origin !== allowedOrigin) throw new ApiError(403, "INVALID_ORIGIN", "Request origin is not allowed.");
 }
 
-export async function parseJson<T>(request: Request, schema: z.ZodType<T>): Promise<T> {
+export async function parseJson<T>(request: Request, schema: z.ZodType<T>, maxBytes = 16_384): Promise<T> {
   if (!request.headers.get("content-type")?.toLowerCase().startsWith("application/json")) {
     throw new ApiError(415, "UNSUPPORTED_MEDIA_TYPE", "Send JSON with Content-Type application/json.");
   }
   const body = await request.text();
-  if (new TextEncoder().encode(body).length > 16_384) throw new ApiError(413, "PAYLOAD_TOO_LARGE", "Request is too large.");
+  if (new TextEncoder().encode(body).length > maxBytes) throw new ApiError(413, "PAYLOAD_TOO_LARGE", "Request is too large.");
   let json: unknown;
   try { json = JSON.parse(body); } catch { throw new ApiError(400, "INVALID_JSON", "Request body must be valid JSON."); }
   return schema.parse(json);

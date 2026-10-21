@@ -1,4 +1,5 @@
 ﻿"use client";
+import { notify } from "@/components/notifications";
 import { useEffect, useRef, useState } from "react";
 import type { parseReceiptText } from "@/lib/receipts/parser";
 import { categories } from "@/lib/tax/categories";
@@ -12,17 +13,18 @@ export function ReceiptScanner({ done, close }: { done: () => void; close: () =>
   useEffect(() => { active.current = true; return () => { active.current = false; controller.current?.abort(); }; }, []);
   async function upload(file?: File) {
     if (!file || pending) return;
-    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 5 * 1024 * 1024 || !file.size) { setError("Choose a JPG, PNG or WebP image, up to 5 MB."); return; }
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 5 * 1024 * 1024 || !file.size) { setError("Choose a JPG, PNG or WebP image, up to 5 MB."); notify("Choose a JPG, PNG or WebP image, up to 5 MB.", "error"); return; }
     setPending(true); setError("");
     const abort = new AbortController(); controller.current = abort;
-    const timer = setTimeout(() => abort.abort(), 45000);
+    let timedOut = false;
+    const timer = setTimeout(() => { timedOut = true; abort.abort(); }, 45000);
     try {
       const form = new FormData(); form.set("image", file);
       const response = await fetch("/api/receipts/scan", { method: "POST", body: form, signal: abort.signal });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error?.message || "Scanning failed. You can still enter the expense manually.");
-      if (active.current) setScan(result.data);
-    } catch (e) { if (active.current) setError((e as Error).name === "AbortError" ? "Scanning timed out. Try again or enter the expense manually." : (e as Error).message); }
+      if (active.current) { setScan(result.data); notify("Receipt scanned. Review before saving."); }
+    } catch (e) { if (active.current && (!abort.signal.aborted || timedOut)) { const message = timedOut ? "Scanning timed out. Try again or enter the expense manually." : (e as Error).message; setError(message); notify(message, "error"); } }
     finally { clearTimeout(timer); if (active.current) setPending(false); }
   }
   async function discard() {

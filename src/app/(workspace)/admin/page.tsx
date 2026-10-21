@@ -1,3 +1,4 @@
-import { PlaceholderPage } from "@/components/placeholder-page";
+import { AdminPage } from "@/components/domain/admin";
+import { requireAdmin } from "@/lib/auth/session";
 export const metadata = { title: "Admin" };
-export default function Page() { return <PlaceholderPage section="admin" />; }
+export default async function Page() { const user = await requireAdmin(); return <AdminPage actorId={user.id} />; }

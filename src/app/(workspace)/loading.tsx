@@ -1,1 +1,2 @@
-export default function Loading() { return <div className="panel loading" role="status">Loading your workspace…</div>; }
+import { Loading } from "@/components/domain/common";
+export default Loading;

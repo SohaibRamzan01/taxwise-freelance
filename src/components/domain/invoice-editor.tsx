@@ -1,4 +1,5 @@
 "use client";
+import { notify } from "@/components/notifications";
 import { useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
@@ -26,7 +27,7 @@ export function InvoiceEditor({ row, done, close }: { row?: RecordRow; done: () 
       await api(`/api/invoices${row ? `/${row.id}` : ""}`, row ? "PATCH" : "POST", {
         clientId, issueDate: form.get("issueDate"), dueDate: form.get("dueDate"), items: bodyItems(), discountCents: dollarsToCents(discount), taxRateBasisPoints: dollarsToCents(tax), currency: "USD", notes: form.get("notes") || null, terms: form.get("terms") || null,
       }); done();
-    } catch (error) { setError((error as Error).message); } finally { setPending(false); }
+    } catch (error) { setError((error as Error).message); notify((error as Error).message, "error"); } finally { setPending(false); }
   }
   const changeItem = (id: number, key: "description" | "quantity" | "price", value: string) => setItems(items.map(item => item.id === id ? { ...item, [key]: value } : item));
   return <form onSubmit={submit}><div className="form-grid"><label className="field">Find client<input type="search" value={clientSearch} onChange={e => setClientSearch(e.target.value)} placeholder="Search by name or company" /></label><label className="field">Client<select required value={clientId} onChange={e => setClientId(e.target.value)}><option value="">Choose a client</option>{clientId && !clients.data?.data.some(c => c.id === clientId) && <option value={clientId}>{row?.client?.name || "Selected client"}</option>}{clients.data?.data.map(client => <option key={client.id} value={client.id}>{client.company || client.name}</option>)}</select></label><label className="field">Issue date<input name="issueDate" type="date" required defaultValue={row?.issueDate?.slice(0, 10) ?? new Date().toISOString().slice(0, 10)} /></label><label className="field">Due date<input name="dueDate" type="date" required defaultValue={row?.dueDate?.slice(0, 10)} /></label></div>

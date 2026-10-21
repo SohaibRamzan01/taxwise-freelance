@@ -17,11 +17,11 @@ describe("protected route middleware", () => {
     response = await middleware(new NextRequest("http://localhost/invoices", { headers: { cookie: "taxwise_session=bad" } }));
     expect(response.headers.get("location")).toBe("http://localhost/login?next=%2Finvoices");
   });
-  it("allows signed-in users and redirects non-admins from admin", async () => {
+  it("allows signed-in users through to server guards regardless of a stale JWT role", async () => {
     verify.mockResolvedValue({ userId: "u1", role: "USER" });
     const request = (path: string) => new NextRequest(`http://localhost${path}`, { headers: { cookie: "taxwise_session=token" } });
     expect((await middleware(request("/dashboard"))).headers.get("x-middleware-next")).toBe("1");
-    expect((await middleware(request("/admin"))).headers.get("location")).toBe("http://localhost/dashboard");
+    expect((await middleware(request("/admin"))).headers.get("x-middleware-next")).toBe("1");
     verify.mockResolvedValue({ userId: "u1", role: "ADMIN" });
     expect((await middleware(request("/admin"))).headers.get("x-middleware-next")).toBe("1");
   });

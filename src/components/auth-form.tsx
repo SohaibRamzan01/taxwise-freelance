@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { notify } from "./notifications";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { ArrowRight, Eye, EyeOff } from "lucide-react";
@@ -23,14 +24,16 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
       if (!response.ok) {
         const fields = result.error?.details?.fieldErrors as Record<string, string[]> | undefined;
         const detail = fields ? Object.values(fields).flat()[0] : undefined;
-        setError(detail ?? result.error?.message ?? "Unable to sign in. Please try again.");
+        const message = detail ?? result.error?.message ?? "Unable to sign in. Please try again.";
+        setError(message); notify(message, "error");
         return;
       }
+      notify(signup ? "Account created." : "Signed in.");
       const next = new URLSearchParams(window.location.search).get("next");
       const paths = ["/dashboard", "/expenses", "/income", "/invoices", "/clients", "/tax-estimator", "/settings", "/admin"];
       router.replace(next && paths.includes(next) ? next : "/dashboard");
       router.refresh();
-    } catch { setError("We couldn’t connect. Check your connection and try again."); }
+    } catch { notify("Could not connect. Try again.", "error"); setError("We couldn’t connect. Check your connection and try again."); }
     finally { setPending(false); }
   }
 

@@ -39,7 +39,7 @@ and data are never overwritten.
 | `JWT_SECRET` | Random secret, at least 32 bytes. Required for signing/verifying sessions. |
 | `APP_URL` | Canonical app origin, including protocol and port. Set explicitly in production; mutations require an exact matching Origin header. |
 | `ADMIN_EMAILS` | Comma-separated emails, matched case-insensitively, promoted to ADMIN at signup. |
-| `GEMINI_API_KEY` | Optional, reserved for future expense categorization. |
+| `GEMINI_API_KEY` | Optional Gemini 2.5 Flash expense suggestions; rules fallback on errors/timeouts. |
 | `SEED_DEMO_PASSWORD` | Optional demo password; seed skips if absent. Never set this in production unless deliberately seeding a demo. |
 
 Keep `.env` private. The checked-in `.env.example` contains no credentials for deployed services.
@@ -204,3 +204,60 @@ PDF signatures/sizes, and matching JSON/CSV totals. It cleans up its disposable 
 `node scripts/render-smoke-pdfs.mjs` renders the saved PDFs for visual inspection.
 Generated smoke PDFs/PNGs are under gitignored `orchestration/logs/task-004/`.
 The Next build explicitly traces PDFKit fonts and Tesseract workers/WASM/language data.
+
+## AI suggestions, data tools and administration (task 005)
+
+Expense forms offer **Suggest category**. The server calls Gemini 2.5 Flash with a strict
+JSON schema and a five-second deadline, validates the result with Zod, and returns
+category, confidence (0–1), and source (`ai`/`rules`). Without a key or on provider failure,
+the keyword engine supplies a suggestion. Review every category before saving. Only
+vendor, description/notes and amount in USD cents are sent to Google when a key is set.
+The request follows [Google's structured output documentation](https://ai.google.dev/gemini-api/docs/structured-output).
+
+Expenses support current-page selection, bulk deletion (including receipts), and bulk
+category changes. Each batch is one tenant-scoped, all-or-nothing transaction with an
+audit record. A missing or foreign ID rejects the whole batch. Expenses and income
+export all matching filters/sort order independently of pagination (10,000 rows maximum;
+narrow filters for larger ledgers). Formula-like text is escaped with an apostrophe.
+
+CSV expense import accepts 1–50 rows and up to 128 KB per preview. Use unique headers:
+
+```csv
+date,vendor,amount,category,businessUsePercent,paymentMethod,notes
+2026-06-01,Adobe,29.99,,100,CREDIT_CARD,Design tools
+```
+
+Date, vendor and amount (USD, up to two decimal places) are required. Other columns are
+optional. Dates use YYYY-MM-DD; category and payment method use the enum codes in
+`prisma/schema.prisma`. Blank categories receive suggestions (up to ten concurrent
+provider calls). Preview shows physical line numbers, row errors and editable categories;
+fix errors in the CSV and preview again. Commit revalidates everything server-side and
+imports atomically with an audit entry. Re-importing a file creates new rows. Quoted
+commas/newlines, escaped quotes, UTF-8 BOM and CRLF/LF are supported. Formula escaping
+is retained as literal text when re-importing exports.
+
+The header search returns up to five owner-scoped matches each for expenses, clients
+and invoices. Results link to filtered ledgers or the invoice detail/print view.
+
+`/admin` includes overview charts, searchable/paginated users with role and account access
+controls, and an audit viewer filtered by actor, action, entity, dates or search text.
+Every admin API independently reloads the active session user and requires ADMIN.
+Self-demotion/deactivation is rejected. Changes and audits share a transaction; existing
+sessions reload account status and role on subsequent requests. Telemetry covers twelve
+Monday-based UTC weeks. Active users means enabled accounts with a login/signup (30-day
+KPI or weekly chart); enabled-account counts are separate. Invoice counts/face values
+include every status and are not revenue.
+
+New endpoints (authenticated; mutations also require the configured Origin):
+
+- `POST /api/expenses/categorize`: `{ vendor, description, amount }` (amount in cents).
+- `POST /api/expenses/bulk`: `{ action: "delete", ids }` or `{ action: "categorize", ids, category }`, up to 100 unique IDs.
+- `GET /api/expenses/export`, `GET /api/income/export`: existing list filters and sorting.
+- `POST /api/expenses/import/preview`: `{ csv }`; `POST /api/expenses/import`: `{ rows }` using validated expense objects, excluding receipt IDs.
+- `GET /api/search?q=…`: at least two characters.
+- `GET /api/admin/overview`, `/api/admin/users`, `/api/admin/audit`; `PATCH /api/admin/users/[id]`: `{ role?, isActive? }`.
+
+After building and starting the production app locally, run `node scripts/smoke-ai-admin.mjs`
+for an end-to-end HTTP/database check. It creates disposable accounts, bootstraps only
+its own admin fixture, verifies CSV/batch/search/admin flows and existing-session access
+changes, and removes all its fixtures afterward. Both app and database must be local.

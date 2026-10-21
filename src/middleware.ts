@@ -9,9 +9,8 @@ export async function middleware(request: NextRequest) {
     login.searchParams.set("next", request.nextUrl.pathname);
     return NextResponse.redirect(login);
   }
-  if (request.nextUrl.pathname.startsWith("/admin") && session.role !== "ADMIN") {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
-  }
+  // The server admin layout and every admin API reload the current database role.
+  // A JWT role can be stale after an administrator promotes or demotes an account.
   return NextResponse.next();
 }
 
