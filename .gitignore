@@ -15,3 +15,4 @@ orchestration/logs/
 /out/
 /vercel/
 /.vercel/
+reports/weekly/build/
