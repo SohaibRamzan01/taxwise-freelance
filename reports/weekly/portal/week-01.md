@@ -1,10 +1,9 @@
 # Week 1 Progress Report: Problem Discovery & User Personas
 
-- **Student:** Muhammad Sohaib Ramzan
+- **Student:** Muhammad Sohaib Ramzan (Roll No. 24-ST-004)
 - **Supervisor:** Dr. Zaigham Mushtaq
 - **Department:** Software Engineering Technology (Section A)
 - **Project:** PTUT-PRJ-042, TaxWise Freelance (Automated Tax Deductions & Invoicing Platform)
-- **Period:** 14 to 20 October 2026
 
 ## 1. Work Completed This Week
 

@@ -1,10 +1,9 @@
 # Week 3 Progress Report: High-Level Architecture & Cloud Topology
 
-- **Student:** Muhammad Sohaib Ramzan
+- **Student:** Muhammad Sohaib Ramzan (Roll No. 24-ST-004)
 - **Supervisor:** Dr. Zaigham Mushtaq
 - **Department:** Software Engineering Technology (Section A)
 - **Project:** PTUT-PRJ-042, TaxWise Freelance (Automated Tax Deductions & Invoicing Platform)
-- **Period:** 28 October to 3 November 2026
 
 ## 1. Work Completed This Week
 

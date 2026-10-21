@@ -1,10 +1,9 @@
 # Week 4 Progress Report: Database Modeling & UI Wireframes
 
-- **Student:** Muhammad Sohaib Ramzan
+- **Student:** Muhammad Sohaib Ramzan (Roll No. 24-ST-004)
 - **Supervisor:** Dr. Zaigham Mushtaq
 - **Department:** Software Engineering Technology (Section A)
 - **Project:** PTUT-PRJ-042, TaxWise Freelance (Automated Tax Deductions & Invoicing Platform)
-- **Period:** 4 to 10 November 2026
 
 ## 1. Work Completed This Week
 

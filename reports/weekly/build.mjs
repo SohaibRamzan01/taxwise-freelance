@@ -55,8 +55,8 @@ function esc(s) {
 
 function template(m, md) {
   const info = [
-    ["Student", m.student], ["Supervisor", m.supervisor], ["Department", m.department], ["Section", m.section],
-    ["Project ID", m.projectId], ["Domain", m.domain], ["Reporting period", m.period], ["Submitted", m.date],
+    ["Student", m.student], ["Roll number", m.rollNo], ["Supervisor", m.supervisor], ["Department", m.department], ["Section", m.section],
+    ["Project ID", m.projectId], ["Domain", m.domain],
   ].filter(([, v]) => v);
   return `<!doctype html><html><head><meta charset="utf-8"><title>${esc(m.title)}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

@@ -1,10 +1,9 @@
 # Week 2 Progress Report: Software Requirements Specification (SRS)
 
-- **Student:** Muhammad Sohaib Ramzan
+- **Student:** Muhammad Sohaib Ramzan (Roll No. 24-ST-004)
 - **Supervisor:** Dr. Zaigham Mushtaq
 - **Department:** Software Engineering Technology (Section A)
 - **Project:** PTUT-PRJ-042, TaxWise Freelance (Automated Tax Deductions & Invoicing Platform)
-- **Period:** 21 to 27 October 2026
 
 ## 1. Work Completed This Week
 
