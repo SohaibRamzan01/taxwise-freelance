@@ -32,7 +32,8 @@ async function main() {
         { userId, date: new Date("2026-06-02"), vendor: "Figma", amountCents: 1500, category: "SOFTWARE_AND_SUBSCRIPTIONS", paymentMethod: "CREDIT_CARD" },
         { userId, date: new Date("2026-06-08"), vendor: "Office supply store", amountCents: 8400, category: "SUPPLIES", paymentMethod: "DEBIT_CARD" },
         { userId, date: new Date("2026-06-10"), vendor: "Client lunch", amountCents: 6200, category: "MEALS", paymentMethod: "CREDIT_CARD", notes: "Project planning with Cedar & Co." },
-        { userId, date: new Date("2026-06-15"), vendor: "Internet service", amountCents: 8000, businessUsePercent: 75, category: "UTILITIES", paymentMethod: "BANK_TRANSFER" },
+        { userId, date: new Date("2026-06-15"), vendor: "Internet service", amountCents: 8000, businessUsePercent: 75, category: "INTERNET_PHONE", paymentMethod: "BANK_TRANSFER" },
+        { userId, date: new Date("2026-06-16"), vendor: "Dell monitor", amountCents: 24900, category: "COMPUTER_HARDWARE", paymentMethod: "CREDIT_CARD" },
       ] });
       await tx.estimatedPayment.create({ data: { userId, taxYear: 2026, quarter: 2, date: new Date("2026-06-15"), amountCents: 45000, notes: "Sample estimated payment" } });
     });

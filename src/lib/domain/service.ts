@@ -59,6 +59,9 @@ export async function listRecords(entity: Entity, userId: string, q: ListQuery) 
     const args = options as Prisma.InvoiceFindManyArgs;
     const result = await Promise.all([db.invoice.findMany({ ...args, include: invoiceInclude }), db.invoice.count({ where: args.where })]);
     rows = result[0].map(displayInvoice); total = result[1];
+  } else if (entity === "expenses") {
+    const args = options as Prisma.ExpenseFindManyArgs;
+    [rows, total] = await Promise.all([db.expense.findMany({ ...args, include: { receipt: { select: { id: true } } } }), db.expense.count({ where: args.where })]);
   } else {
     // The structural cast stays at this adapter boundary; input field names come from the allowlist above.
     const table = delegate as unknown as { findMany(args: typeof options): Promise<unknown[]>; count(args: { where: typeof options.where }): Promise<number> };
@@ -89,7 +92,13 @@ export async function createRecord(entity: Entity, userId: string, body: unknown
   const payment = entity === "estimated-payments" ? paymentSchema.parse(body) : null;
   const invoice = entity === "invoices" ? invoiceSchema.parse(body) : null;
   return write(userId, async tx => {
-    if (expense) return tx.expense.create({ data: { ...expense, userId } });
+    if (expense) {
+      const { receiptId, ...data } = expense;
+      if (receiptId && !await tx.receipt.findFirst({ where: { id: receiptId, userId, expenseId: null } })) throw missing();
+      const row = await tx.expense.create({ data: { ...data, userId } });
+      if (receiptId) await tx.receipt.update({ where: { id: receiptId, userId }, data: { expenseId: row.id } });
+      return row;
+    }
     if (income) return tx.income.create({ data: { ...income, userId } });
     if (client) return tx.client.create({ data: { ...client, userId } });
     if (payment) return tx.estimatedPayment.create({ data: { ...payment, userId } });

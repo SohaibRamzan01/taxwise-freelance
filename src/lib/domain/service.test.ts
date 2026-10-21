@@ -4,7 +4,7 @@ import type { Entity } from "./validation";
 
 const mock = vi.hoisted(() => {
   const table = () => ({ findMany: vi.fn(), count: vi.fn(), findFirst: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn(), createMany: vi.fn(), deleteMany: vi.fn(), upsert: vi.fn() });
-  return { expense: table(), income: table(), client: table(), invoice: table(), invoiceItem: table(), estimatedPayment: table(), user: { update: vi.fn() }, auditLog: { create: vi.fn() }, $queryRaw: vi.fn(), $transaction: vi.fn(), requireUser: vi.fn() };
+  return { receipt: table(), expense: table(), income: table(), client: table(), invoice: table(), invoiceItem: table(), estimatedPayment: table(), user: { update: vi.fn() }, auditLog: { create: vi.fn() }, $queryRaw: vi.fn(), $transaction: vi.fn(), requireUser: vi.fn() };
 });
 vi.mock("@/lib/db", () => ({ db: mock }));
 vi.mock("@/lib/auth/session", () => ({ requireUser: mock.requireUser }));
@@ -143,5 +143,21 @@ describe("authenticated domain routes", () => {
     expect((await collectionRoutes("expenses").GET(request())).status).toBe(401);
     expect((await collectionRoutes("expenses").POST(new Request("http://localhost/api/expenses", { method: "POST" }))).status).toBe(403);
     vi.unstubAllEnvs();
+  });
+});
+
+describe("receipt attachment", () => {
+  it("attaches only an owned, unlinked receipt in the expense transaction", async () => {
+    mock.receipt.findFirst.mockResolvedValue({ id: "receipt1" });
+    await createRecord("expenses", "u1", { ...inputs.expenses, receiptId: "receipt1" });
+    expect(mock.receipt.findFirst).toHaveBeenCalledWith({ where: { id: "receipt1", userId: "u1", expenseId: null } });
+    expect(mock.expense.create).toHaveBeenCalledWith({ data: expect.not.objectContaining({ receiptId: expect.anything() }) });
+    expect(mock.receipt.update).toHaveBeenCalledWith({ where: { id: "receipt1", userId: "u1" }, data: { expenseId: "r1" } });
+  });
+  it("rejects foreign, missing or already-linked receipts before creating an expense", async () => {
+    mock.receipt.findFirst.mockResolvedValue(null);
+    await expect(createRecord("expenses", "u1", { ...inputs.expenses, receiptId: "foreign" })).rejects.toMatchObject({ status: 404 });
+    expect(mock.expense.create).not.toHaveBeenCalled();
+    await expect(updateRecord("expenses", "u1", "r1", { receiptId: "foreign" })).rejects.toThrow();
   });
 });

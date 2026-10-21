@@ -146,3 +146,61 @@ checks signup → client → invoice → paid income → expense → estimate, t
 tenant isolation, validation, profile/dashboard/print routes, and delete audit records.
 It removes only its own test accounts/data afterward; it refuses non-local app/database
 hosts. The server and script must use the same database.
+
+## Receipt OCR and downloadable reports
+
+On **Expenses**, choose **Scan receipt**, then upload, drop, or photograph one JPG/PNG/WebP
+image (maximum 5 MiB). The server checks magic bytes and MIME type, runs Tesseract OCR,
+and suggests vendor, date, amount and category. Review and correct every field before
+saving; the suggested category has an Auto badge. Missing fields remain editable.
+Scanning errors never prevent manual expense entry. Download fictitious demo images
+from the scanner or `public/samples/`; regenerate them with `node scripts/generate-receipts.mjs`.
+
+OCR uses English language data bundled in `@tesseract.js-data/eng`, with no runtime
+language download or external OCR service. It has a 25-second timeout and permits one
+scan at a time per process. Dates default to US month/day/year; unambiguous day-first,
+ISO and English month-name dates are also supported. Totals prefer grand total/amount
+due/total lines; missing labels fall back to the largest plausible monetary amount.
+Treat all recognized fields and keyword categories as suggestions, not verified facts.
+
+Scanned images are stored in PostgreSQL `Receipt.image` (`bytea`) and attached to an
+expense transactionally only when the user saves it. Images are private and served with
+`Cache-Control: no-store`; every lookup and attachment is scoped to the session user.
+Deleting an expense deletes its receipt. Cancel in the review form discards its pending
+image. Closing the dialog/tab may leave an unattached scan; each user's pending scans
+older than 24 hours are cleaned up on their next successful scan. At most ten pending
+scans per user are retained. The categories now include Computer hardware & equipment
+and Internet & phone, with business-use percentages applied at a 100% category factor.
+
+Invoice print pages offer **Download PDF**, and invoice rows have a PDF link. **Reports**
+provides year/calendar-quarter selection, an actual-earnings preview, PDF downloads and
+a CSV deduction summary with matching category totals and Schedule C planning labels.
+Quarter summaries are not annualised. Their period tax calculation applies annual tax
+rules/deductions to that quarter alone for planning, not a quarterly filing liability.
+The separate tax-year payment plan uses all YTD actual earnings and tax-year-assigned
+payments through the as-of date, including next-January payments. Payments shown for a
+quarter are selected by their assigned quarter, not their calendar payment date.
+Hardware's line 27a is a planning mapping; actual capitalization/depreciation treatment
+requires review. Only the existing 2026 US federal/USD rules are supported.
+
+New endpoints (authenticated; mutations require the configured Origin):
+
+- `POST /api/receipts/scan`: multipart form with exactly one `image` file; returns
+  `{ data: { receiptId, vendor, date, totalCents, rawText, suggestion } }` (201).
+- `GET /api/receipts/[id]`: the owner's original image. `DELETE` discards an unattached
+  scan only, with a transactional audit record. Foreign/missing/attached deletes return 404.
+- Expense `POST` optionally accepts `receiptId`; it must belong to the user and be unlinked.
+  Expense lists expose only `{ receipt: { id } }`, never the binary image.
+- `GET /api/invoices/[id]/pdf`: the owner's PDFKit invoice, including profile, client,
+  line items, discount, tax, payment status, notes and terms.
+- `GET /api/reports/tax-summary?year=2026&quarter=`: PDFKit tax summary. Set quarter to
+  1–4 to filter a calendar quarter; omit or leave it empty for the year. Optional
+  `format=json` returns the preview; `format=csv` downloads the deduction summary.
+
+After applying migrations and starting `npm run build:local` + `npm start`, run
+`node scripts/smoke-receipts-reports.mjs` against the local app/database. It exercises
+three real OCR scans, attachment, private image retrieval, tenant isolation, cleanup,
+PDF signatures/sizes, and matching JSON/CSV totals. It cleans up its disposable accounts.
+`node scripts/render-smoke-pdfs.mjs` renders the saved PDFs for visual inspection.
+Generated smoke PDFs/PNGs are under gitignored `orchestration/logs/task-004/`.
+The Next build explicitly traces PDFKit fonts and Tesseract workers/WASM/language data.

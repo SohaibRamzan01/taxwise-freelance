@@ -13,6 +13,7 @@ const navigation = [
   { href: "/invoices", label: "Invoices", Icon: FileText },
   { href: "/clients", label: "Clients", Icon: Users },
   { href: "/tax-estimator", label: "Tax Estimator", Icon: Calculator },
+  { href: "/reports", label: "Reports", Icon: FileText },
   { href: "/settings", label: "Settings", Icon: Settings },
 ];
 

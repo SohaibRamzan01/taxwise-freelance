@@ -17,6 +17,12 @@ const csp = [
 
 const config: NextConfig = {
   poweredByHeader: false,
+  serverExternalPackages: ["tesseract.js", "tesseract.js-core", "@tesseract.js-data/eng", "pdfkit"],
+  outputFileTracingIncludes: {
+    "/api/receipts/*": ["./node_modules/tesseract.js/src/**/*", "./node_modules/tesseract.js-core/**/*", "./node_modules/@tesseract.js-data/eng/4.0.0/*"],
+    "/api/invoices/*/pdf": ["./node_modules/pdfkit/js/data/*"],
+    "/api/reports/*": ["./node_modules/pdfkit/js/data/*"],
+  },
   async headers() {
     return [{ source: "/:path*", headers: [
       { key: "Content-Security-Policy", value: csp },

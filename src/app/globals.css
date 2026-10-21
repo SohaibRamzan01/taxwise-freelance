@@ -221,3 +221,10 @@ td small, .compact-list small { display: block; color: var(--muted); font-size: 
   tr, .invoice-totals, .invoice-notes { break-inside: avoid; }
   thead { display: table-header-group; }
 }
+.receipt-drop { border: 2px dashed var(--line); border-radius: 12px; padding: 24px; display: grid; gap: 16px; }
+.receipt-drop.dragging { border-color: var(--teal); background: #edf5ee; }
+.receipt-drop h3, .receipt-drop p { margin: 0; }
+.receipt-text { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; max-height: 180px; overflow-y: auto; }
+.report-numbers { margin: 20px 0; }
+.report-numbers > div { display: flex; justify-content: space-between; gap: 18px; padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+.report-numbers dd { margin: 0; font-variant-numeric: tabular-nums; text-align: right; }

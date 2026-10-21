@@ -1,4 +1,6 @@
 export const categories = {
+  COMPUTER_HARDWARE: { label: "Computer hardware & equipment", scheduleC: "27a", factorBasisPoints: 10000 },
+  INTERNET_PHONE: { label: "Internet & phone", scheduleC: "25", factorBasisPoints: 10000 },
   ADVERTISING: { label: "Advertising", scheduleC: "8", factorBasisPoints: 10000 },
   CAR_AND_TRUCK: { label: "Car & truck", scheduleC: "9", factorBasisPoints: 10000 },
   CONTRACT_LABOR: { label: "Contract labor", scheduleC: "11", factorBasisPoints: 10000 },
