@@ -9,3 +9,9 @@ __pycache__/
 .venv/
 orchestration/logs/
 .npm-cache/
+*.tsbuildinfo
+.env.*
+!.env.example
+/out/
+/vercel/
+/.vercel/

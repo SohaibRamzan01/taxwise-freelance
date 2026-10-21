@@ -1,0 +1,223 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum FilingStatus {
+  SINGLE
+  MARRIED_FILING_JOINTLY
+  HEAD_OF_HOUSEHOLD
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  OVERDUE
+  VOID
+}
+
+enum ExpenseCategory {
+  ADVERTISING
+  CAR_AND_TRUCK
+  CONTRACT_LABOR
+  INSURANCE
+  LEGAL_AND_PROFESSIONAL
+  OFFICE_EXPENSE
+  RENT_AND_LEASE
+  SUPPLIES
+  TRAVEL
+  MEALS
+  UTILITIES
+  SOFTWARE_AND_SUBSCRIPTIONS
+  HOME_OFFICE
+  EDUCATION
+  OTHER
+}
+
+enum PaymentMethod {
+  CASH
+  CREDIT_CARD
+  DEBIT_CARD
+  BANK_TRANSFER
+  OTHER
+}
+
+model User {
+  id                   String       @id @default(cuid())
+  email                String       @unique
+  name                 String
+  passwordHash         String
+  role                 Role         @default(USER)
+  isActive             Boolean      @default(true)
+  filingStatus         FilingStatus @default(SINGLE)
+  taxYear              Int          @default(2026)
+  priorYearTaxCents    Int          @default(0)
+  priorYearAgiCents    Int          @default(0)
+  useSafeHarbour       Boolean      @default(false)
+  businessName         String?
+  businessAddress      String?
+  businessEmail        String?
+  businessPhone        String?
+  currency             String       @default("USD") @db.Char(3)
+  nextInvoiceNumber    Int          @default(1)
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+  clients              Client[]
+  invoices             Invoice[]
+  invoiceItems         InvoiceItem[]
+  expenses             Expense[]
+  income               Income[]
+  estimatedPayments    EstimatedPayment[]
+  auditLogs            AuditLog[]
+}
+
+model Client {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  email     String?
+  company   String?
+  address   String?
+  phone     String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invoices  Invoice[]
+
+  @@unique([id, userId])
+  @@index([userId])
+  @@index([userId, name])
+}
+
+model Invoice {
+  id                 String        @id @default(cuid())
+  userId             String
+  clientId           String
+  number             String
+  status             InvoiceStatus @default(DRAFT)
+  issueDate          DateTime      @db.Date
+  dueDate            DateTime      @db.Date
+  paidAt             DateTime?
+  subtotalCents      Int           @default(0)
+  discountCents      Int           @default(0)
+  taxRateBasisPoints Int           @default(0)
+  taxCents           Int           @default(0)
+  totalCents         Int           @default(0)
+  currency           String        @default("USD") @db.Char(3)
+  notes              String?
+  terms              String?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  user               User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client             Client        @relation(fields: [clientId, userId], references: [id, userId], onDelete: Restrict)
+  items              InvoiceItem[]
+  income             Income?
+
+  @@unique([id, userId])
+  @@unique([userId, number])
+  @@index([userId])
+  @@index([userId, status])
+  @@index([userId, issueDate])
+  @@index([userId, dueDate])
+  @@index([clientId, userId])
+}
+
+model InvoiceItem {
+  id             String   @id @default(cuid())
+  userId         String
+  invoiceId      String
+  description    String
+  quantity       Decimal  @default(1) @db.Decimal(12, 4)
+  unitPriceCents Int
+  amountCents    Int
+  position       Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invoice        Invoice  @relation(fields: [invoiceId, userId], references: [id, userId], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([invoiceId, userId])
+  @@index([userId, invoiceId, position])
+}
+
+model Expense {
+  id                 String          @id @default(cuid())
+  userId             String
+  date               DateTime        @db.Date
+  vendor             String
+  amountCents        Int
+  category           ExpenseCategory @default(OTHER)
+  businessUsePercent Int             @default(100)
+  paymentMethod      PaymentMethod   @default(OTHER)
+  notes              String?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  user               User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, date])
+  @@index([userId, category])
+}
+
+model Income {
+  id          String   @id @default(cuid())
+  userId      String
+  invoiceId   String?  @unique
+  date        DateTime @db.Date
+  source      String
+  amountCents Int
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invoice     Invoice? @relation(fields: [invoiceId, userId], references: [id, userId], onDelete: Restrict)
+
+  @@unique([invoiceId, userId])
+  @@index([userId])
+  @@index([userId, date])
+}
+
+model EstimatedPayment {
+  id              String   @id @default(cuid())
+  userId          String
+  taxYear         Int
+  quarter         Int
+  date            DateTime @db.Date
+  amountCents     Int
+  confirmation    String?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, date])
+  @@index([userId, taxYear, quarter])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String
+  action     String
+  entityType String?
+  entityId   String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, createdAt])
+  @@index([userId, action])
+  @@index([createdAt])
+}
