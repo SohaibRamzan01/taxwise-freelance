@@ -1,11 +1,11 @@
-# Task 004 — AI categorisation, batch ops, admin RBAC portal, UX polish (weeks 8–9)
+# Task 005 — AI categorisation, batch ops, admin RBAC portal, UX polish (weeks 8–9)
 
 Read `orchestration/PROJECT.md`, `README.md`, and existing code. Build on existing patterns.
 
 1. **Gemini AI categorisation** `src/lib/ai/`: `categorizeExpense({vendor, description, amount})` → category +
    confidence + source ("ai" | "rules"). Calls Gemini REST API (`gemini-2.5-flash`, `GEMINI_API_KEY`) with a strict
    JSON response schema, 5 s timeout, validates output with zod; on missing key / error / timeout / invalid output,
-   falls back to a deterministic keyword rules engine (good coverage of common vendors: AWS, Adobe, Zoom, Uber,
+   reuse and extend the deterministic keyword rules engine from task 004 as the fallback (good coverage of common vendors: AWS, Adobe, Zoom, Uber,
    Delta, WeWork, Upwork fees, etc.). Endpoint POST /api/expenses/categorize; "Suggest category" button in the
    expense form and auto-suggest on CSV import. Unit tests for fallback paths (mock fetch).
 2. **Batch & data ops**: multi-select on expenses table → bulk delete / bulk re-categorise (single API call,
@@ -19,4 +19,4 @@ Read `orchestration/PROJECT.md`, `README.md`, and existing code. Build on existi
    responsive mobile layout (collapsible sidebar / bottom nav), consistent design system, accessible labels and
    focus states, skeleton loaders, 404 / error pages.
 5. Keep lint, typecheck, tests, build:local passing; add tests for new lib code. Report to
-   `orchestration/reports/004-ai-admin-polish.md`.
+   `orchestration/reports/005-ai-admin-polish.md`.

@@ -3,6 +3,17 @@
 Project ID PTUT-PRJ-042 (FinTech, Personal Wealth & Micro-Finance). 12-week academic FYP; this repo
 delivers all weeks' engineering artefacts: docs (weeks 1–4), app (weeks 5–9), tests/security (10), CI + deploy (11).
 
+## Official portal specification (source of truth — PTUT portal, PTUT-PRJ-042)
+- **Core problem:** Freelancers, independent contractors, and remote workers struggle to track tax-deductible
+  business expenses and calculate quarterly tax liabilities.
+- **Solution & key features:** An invoicing and expense tracking dashboard tailored for freelancers that
+  **automatically categorizes receipts into allowable tax deductions (hardware, internet, travel)** and
+  **generates tax-ready summary reports**.
+- **Required tech stack:** React, Tailwind CSS, Node.js, PostgreSQL, **Tesseract OCR**, **PDFKit**.
+  (Next.js = React + Node.js; receipts are read with Tesseract OCR; invoices and tax summary reports are
+  generated as PDFs with PDFKit.)
+- Student: Muhammad Sohaib Ramzan · Supervisor: Dr. Zaigham Mushtaq · Dept. Software Engineering Technology · Section A.
+
 ## Problem
 Freelancers, independent contractors and remote workers struggle to track tax-deductible business
 expenses and to calculate quarterly estimated tax liabilities. They juggle spreadsheets, miss deductions,
@@ -24,6 +35,16 @@ under/over-pay quarterly estimates, and invoice clients in separate tools.
    DRAFT/SENT/PAID/OVERDUE/VOID, due dates, printable invoice view (print CSS → "Save as PDF").
 5. **Dashboard** — KPIs (YTD income, expenses, deductions, estimated tax owed, next payment due), charts
    (monthly income vs expenses, deductions by category), outstanding invoices, upcoming deadlines.
+
+### Receipts & reports (required by the official spec)
+- **Receipt upload + OCR** — upload a receipt image (JPG/PNG/WebP, ≤ 5 MB); Tesseract OCR (tesseract.js, server
+  side) extracts text; a parser pulls vendor, date and total; the categoriser suggests a deduction category; the user
+  reviews and saves the pre-filled expense. Receipt image kept and viewable from the expense.
+- **Categories** also include "Computer hardware & equipment" and "Internet & phone" (the portal names hardware,
+  internet and travel explicitly).
+- **Tax-ready summary report (PDFKit)** — downloadable PDF per tax year (and per quarter): income, expenses and
+  deductions by category (Schedule C-style lines), net profit, SE tax, estimated tax, payments made, disclaimer.
+- **Invoice PDF (PDFKit)** — download an invoice as a real PDF (in addition to the print view).
 
 ### Secondary (week 8–9)
 - AI expense categorisation via Google Gemini (`GEMINI_API_KEY`); deterministic keyword fallback when key

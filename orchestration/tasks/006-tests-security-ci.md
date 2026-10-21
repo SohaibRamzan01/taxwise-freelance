@@ -1,4 +1,4 @@
-# Task 005 — Automated testing, security audit, CI (weeks 10–11)
+# Task 006 — Automated testing, security audit, CI (weeks 10–11)
 
 Read `orchestration/PROJECT.md`, `README.md`, and the existing code.
 
@@ -19,4 +19,4 @@ Read `orchestration/PROJECT.md`, `README.md`, and the existing code.
    Vercel's Neon integration provides both), add `docs/week-11-deployment.md` with deployment runbook, env var list,
    and health check verification steps.
 
-Keep everything passing. Report to `orchestration/reports/005-tests-security-ci.md` including the coverage summary.
+Keep everything passing. Report to `orchestration/reports/006-tests-security-ci.md` including the coverage summary.
