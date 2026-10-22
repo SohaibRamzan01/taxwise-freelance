@@ -18,7 +18,12 @@ describe("deployment security configuration", () => {
     const cron = JSON.parse(await readFile("vercel.json", "utf8"));
     expect(cron.crons).toEqual([{ path: "/api/cron/daily", schedule: "0 6 * * *" }]);
     const { default: config } = await import("../next.config");
-    expect(config.outputFileTracingIncludes?.["/api/receipts/*"]).toEqual(expect.arrayContaining(["./node_modules/tesseract.js/src/**/*", "./node_modules/tesseract.js-core/**/*", "./node_modules/@tesseract.js-data/eng/4.0.0/*"]));
+    expect(config.outputFileTracingIncludes?.["/api/receipts/scan"]).toEqual(expect.arrayContaining([
+      "./node_modules/tesseract.js/src/**/*", "./node_modules/tesseract.js-core/**/*",
+      "./node_modules/@tesseract.js-data/eng/package.json", "./node_modules/@tesseract.js-data/eng/4.0.0/*",
+      "./node_modules/bmp-js/**/*.js", "./node_modules/bmp-js/package.json",
+      "./node_modules/wasm-feature-detect/dist/cjs/*", "./node_modules/wasm-feature-detect/package.json",
+    ]));
     for (const pattern of ["/api/invoices/*/pdf", "/api/reports/*"]) expect(config.outputFileTracingIncludes?.[pattern]).toContain("./node_modules/pdfkit/js/data/*");
   });
 });

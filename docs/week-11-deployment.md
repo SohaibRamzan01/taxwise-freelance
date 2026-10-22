@@ -10,6 +10,8 @@ Use a separate preview database so preview builds do not migrate production data
 3. Keep TLS options from Neon. Store URLs in private environment settings, never in Git.
 
 The app uses `DATABASE_URL` through the PostgreSQL Prisma adapter in `src/lib/db.ts`.
+At runtime, `sslmode=require` is normalized to `sslmode=verify-full`, retaining certificate and
+hostname verification while avoiding pg's warning about the alias's changing meaning.
 Prisma CLI uses `DATABASE_URL_UNPOOLED`, falling back to DATABASE_URL for local databases
 (`prisma.config.ts`). This follows [Neon's Prisma 7 connection guidance](https://neon.com/docs/guides/prisma).
 
@@ -53,8 +55,12 @@ After adding a custom domain or changing environment values, update APP_URL and 
 1. Deploy. Confirm all migrations applied and the Next build completed in Vercel's logs.
 2. The build should show Proxy rather than the middleware deprecation warning (`src/proxy.ts`).
 3. Locally or in CI, `npm run verify:bundle` after a build checks the actual route trace manifests:
-   receipt worker JS, Tesseract WASM, bundled English traineddata, and PDFKit Helvetica fonts.
-   `next.config.ts` includes those packages as external server packages and traces their assets explicitly.
+   receipt worker JS and dependencies, each selectable core JS/WASM pair, bundled English
+   package metadata/traineddata, and PDFKit Helvetica fonts. It then copies only traced package
+   files to an isolated directory and recognizes the sample with network access and host file
+   writes disabled. A require guard in both threads prevents falling back to the full checkout.
+   `next.config.ts` includes those packages as external server packages and traces their assets
+   explicitly for the exact `/api/receipts/scan` route.
 4. Scan a small bundled sample on the hosted app and download an invoice/report PDF. This is the final
    confirmation that Vercel packaged and executed the assets correctly; local trace checks alone cannot prove it.
 
@@ -140,6 +146,15 @@ authorization, failure handling and dashboard controls.
 - Migration failure: verify direct URL/database/permissions; inspect logs and fix the failed migration before retrying.
   Never delete migration history to bypass a production error.
 - OCR missing worker/data or PDF font errors: check build traces, then run hosted smoke; do not rely on runtime downloads.
+- OCR_FAILED on Vercel: filter runtime logs for `receipt_ocr_error`. Each JSON line has `source`
+  (`recognize` or `worker`), `name`, `message`, `code`, and `stack` (null if the worker supplies
+  only a string). It includes no image, OCR text, or request/user context. Missing-module/path
+  details distinguish packaging failures from image decode failures. The public error stays unchanged.
+  English data is read from the bundled local `eng.traineddata.gz` (`gzip: true`), decompressed
+  into memory, and loaded into WASM's virtual filesystem. Host caching is disabled; its defensive
+  cache path is the OS temp directory (`/tmp` on Vercel). There is no runtime language download.
+  Tesseract.js 7's Node adapter chooses its core internally even when `corePath` is explicit,
+  so all selectable core variants and the worker's external dependencies must be shipped.
 - OCR timeout/busy: try a smaller clearer image or enter the expense manually. AI failures fall back to rules.
 - Before future releases, run CI and the smoke; review the remaining development-only audit chain in
   [week 10](week-10-security-testing.md). Back up the database before schema/data changes. A Vercel app rollback

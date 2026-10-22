@@ -19,7 +19,17 @@ const config: NextConfig = {
   poweredByHeader: false,
   serverExternalPackages: ["tesseract.js", "tesseract.js-core", "@tesseract.js-data/eng", "pdfkit"],
   outputFileTracingIncludes: {
-    "/api/receipts/*": ["./node_modules/tesseract.js/src/**/*", "./node_modules/tesseract.js-core/**/*", "./node_modules/@tesseract.js-data/eng/4.0.0/*"],
+    "/api/receipts/scan": [
+      "./node_modules/tesseract.js/src/**/*",
+      "./node_modules/tesseract.js-core/**/*",
+      "./node_modules/@tesseract.js-data/eng/package.json",
+      "./node_modules/@tesseract.js-data/eng/4.0.0/*",
+      // Including the worker script alone does not trace its transitive requires.
+      "./node_modules/bmp-js/**/*.js",
+      "./node_modules/bmp-js/package.json",
+      "./node_modules/wasm-feature-detect/dist/cjs/*",
+      "./node_modules/wasm-feature-detect/package.json",
+    ],
     "/api/invoices/*/pdf": ["./node_modules/pdfkit/js/data/*"],
     "/api/reports/*": ["./node_modules/pdfkit/js/data/*"],
   },
