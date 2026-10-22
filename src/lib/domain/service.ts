@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { ApiError } from "@/lib/api";
+import { deductibleAmount } from "@/lib/tax";
 import { assertTransition, effectiveStatus, invoiceTotals } from "./invoices";
 import { clientSchema, expenseSchema, expensePatchSchema, incomeSchema, invoiceSchema, invoicePatchSchema, paymentSchema, type Entity, type ListQuery } from "./validation";
 
@@ -55,19 +56,26 @@ export async function listRecords(entity: Entity, userId: string, q: ListQuery) 
   // These delegates share findMany/count signatures for the common scoped query options.
   const delegate = entity === "expenses" ? db.expense : entity === "income" ? db.income : entity === "clients" ? db.client : entity === "estimated-payments" ? db.estimatedPayment : null;
   let rows: unknown[], total: number;
+  let totals: { amountCents: number; deductibleCents: number } | undefined;
   if (entity === "invoices") {
     const args = options as Prisma.InvoiceFindManyArgs;
     const result = await Promise.all([db.invoice.findMany({ ...args, include: invoiceInclude }), db.invoice.count({ where: args.where })]);
     rows = result[0].map(displayInvoice); total = result[1];
   } else if (entity === "expenses") {
     const args = options as Prisma.ExpenseFindManyArgs;
-    [rows, total] = await Promise.all([db.expense.findMany({ ...args, include: { receipt: { select: { id: true } } } }), db.expense.count({ where: args.where })]);
+    const [pageRows, count, matching] = await Promise.all([
+      db.expense.findMany({ ...args, include: { receipt: { select: { id: true } } } }),
+      db.expense.count({ where: args.where }),
+      db.expense.findMany({ where: args.where, select: { amountCents: true, businessUsePercent: true, category: true } }),
+    ]);
+    rows = pageRows; total = count;
+    totals = matching.reduce((sum, row) => ({ amountCents: sum.amountCents + row.amountCents, deductibleCents: sum.deductibleCents + deductibleAmount(row.amountCents, row.businessUsePercent, row.category) }), { amountCents: 0, deductibleCents: 0 });
   } else {
     // The structural cast stays at this adapter boundary; input field names come from the allowlist above.
     const table = delegate as unknown as { findMany(args: typeof options): Promise<unknown[]>; count(args: { where: typeof options.where }): Promise<number> };
     [rows, total] = await Promise.all([table.findMany(options), table.count({ where: options.where })]);
   }
-  return { data: rows, pagination: { page: q.page, pageSize: q.pageSize, total, pages: Math.ceil(total / q.pageSize) } };
+  return { data: rows, pagination: { page: q.page, pageSize: q.pageSize, total, pages: Math.ceil(total / q.pageSize) }, ...(totals ? { totals } : {}) };
 }
 
 export async function getRecord(entity: Entity, userId: string, id: string, tx: Tx = db) {

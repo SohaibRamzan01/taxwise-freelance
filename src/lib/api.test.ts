@@ -32,6 +32,17 @@ describe("API utilities", () => {
     expect(JSON.stringify(await unexpected.json())).not.toContain("sensitive");
     log.mockRestore();
   });
+  it("bounds streamed JSON even with missing or dishonest Content-Length", async () => {
+    const cancel = vi.fn();
+    const stream = new ReadableStream({ start(controller) { controller.enqueue(new TextEncoder().encode('"' + "a".repeat(100))); }, cancel });
+    const request = new Request("http://localhost/api", { method: "POST", headers: { "content-type": "application/json", "content-length": "1" }, body: stream, duplex: "half" } as RequestInit);
+    await expect(parseJson(request, z.unknown(), 10)).rejects.toMatchObject({ status: 413 }); expect(cancel).toHaveBeenCalledOnce();
+    const advertised = new Request("http://localhost/api", { method: "POST", headers: { "content-type": "application/json", "content-length": "100" }, body: "{}" });
+    await expect(parseJson(advertised, z.unknown(), 10)).rejects.toMatchObject({ status: 413 });
+    await expect(parseJson(new Request("http://localhost/api", { headers: { "content-type": "application/json" } }), z.unknown())).rejects.toMatchObject({ status: 400 });
+    const text = new Request("http://localhost/api", { method: "POST", headers: { "content-type": "application/json" }, body: '"é"' });
+    await expect(parseJson(text, z.string(), 3)).rejects.toMatchObject({ status: 413 });
+  });
   it("applies origin protection, a consistent error envelope, and retry headers", async () => {
     vi.stubEnv("APP_URL", "http://localhost");
     const handler = apiHandler(async () => { throw new ApiError(429, "RATE_LIMITED", "Wait."); });

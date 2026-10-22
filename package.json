@@ -16,7 +16,10 @@
     "test:coverage": "vitest run --coverage",
     "db:seed": "prisma db seed",
     "db:migrate": "prisma migrate dev",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "smoke": "node scripts/smoke.mjs",
+    "verify:bundle": "node scripts/verify-server-bundle.mjs",
+    "lint:security": "eslint --config eslint.security.config.mjs src scripts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "7.10.1",
@@ -46,6 +49,7 @@
     "@vitest/coverage-v8": "4.1.12",
     "eslint": "^9.39.5",
     "eslint-config-next": "16.4.2",
+    "eslint-plugin-security": "^4.2.0",
     "jiti": "^2.7.0",
     "pdfjs-dist": "^6.4.299",
     "prisma": "7.10.1",

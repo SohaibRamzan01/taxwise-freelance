@@ -108,3 +108,17 @@ export function quarterlySchedule(input: ScheduleInput, rules: TaxRules) {
     remainingCents: Math.max(0, requiredAnnualCents - paidSoFarCents), estimatedBalanceCents: Math.max(0, input.totalTaxCents - paidSoFarCents), nextDueDate, quarters };
 }
 export type QuarterlySchedule = ReturnType<typeof quarterlySchedule>;
+
+/** Current planning status; keeps the original quarter allocations for reference. */
+export function quarterlyPresentation(schedule: QuarterlySchedule, asOf: string) {
+  isoDate(asOf);
+  const quarters = schedule.quarters.map(q => {
+    const currentShortfallCents = Math.max(0, q.cumulativeRequiredCents - schedule.paidSoFarCents);
+    const status = q.remainingCents === 0 ? "PAID" as const
+      : currentShortfallCents === 0 ? "COVERED_LATER" as const
+      : q.dueDate < asOf ? "PAST_DUE" as const : "UPCOMING" as const;
+    return { quarter: q.quarter, dueDate: q.dueDate, requiredCents: q.requiredCents, paidCents: q.paidCents, currentShortfallCents, status };
+  });
+  const next = quarters.find(q => q.dueDate >= asOf);
+  return { quarters, nextDueDate: next?.dueDate ?? null, nextDueCents: next?.currentShortfallCents ?? 0, remainingCents: schedule.remainingCents };
+}

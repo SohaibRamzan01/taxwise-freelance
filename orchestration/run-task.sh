@@ -12,5 +12,5 @@ codex exec -s workspace-write \
   -c sandbox_workspace_write.network_access=true \
   -o "orchestration/logs/$name.last.md" \
   "Read AGENTS.md and orchestration/PROJECT.md, then complete the task in $brief. Write your report to orchestration/reports/$name.md as AGENTS.md describes." \
-  > "orchestration/logs/$name.log" 2>&1
+  < /dev/null > "orchestration/logs/$name.log" 2>&1
 echo "codex finished $name (exit $?)"

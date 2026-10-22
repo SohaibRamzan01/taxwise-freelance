@@ -1,5 +1,7 @@
 # TaxWise Freelance
 
+[![CI](https://github.com/SohaibRamzan01/taxwise-freelance/actions/workflows/ci.yml/badge.svg)](https://github.com/SohaibRamzan01/taxwise-freelance/actions/workflows/ci.yml)
+
 A workspace for freelancers to organize business expenses, track income, invoice clients,
 and plan US federal quarterly taxes. Includes authenticated, tenant-scoped ledgers,
 client and invoice management, a quarterly estimator, and a responsive dashboard.
@@ -26,21 +28,46 @@ On Windows PowerShell, use `npm.cmd` if execution policy blocks `npm.ps1`.
 6. Optionally set `SEED_DEMO_PASSWORD` (12+ characters, at most 72 UTF-8 bytes), then run `npm run db:seed`.
 7. Run `npm run dev`, then open <http://localhost:3000>.
 
-The optional seed creates `demo@taxwise.example`, two clients, paid/sent invoices and
-line items, manual/invoice-linked income, categorized expenses, and an estimated payment.
-It skips when no password is supplied or the demo email already exists; existing accounts
-and data are never overwritten.
+The optional seed creates `demo@taxwise.example` with a realistic January–October 2026
+design studio ledger: four clients, twelve paid invoices ($79,500), two sent invoices
+(one overdue as of October 22), one draft, one void, three manual income entries ($2,980),
+48 expenses across all 17 categories, three attached sample receipts, and Q1–Q3 payments.
+The single-filer profile uses $16,000 prior-year tax/$78,000 AGI and safe harbour; Q3 is
+$150 short of its $4,000 target. Sample hardware, internet and meals expenses match the
+images in `public/samples/`. These are fictitious demonstration records.
+
+Existing demo data is skipped by default. To replace **only this demo user's** ledger
+and profile (including its password), run in PowerShell:
+
+```powershell
+$env:SEED_RESET_DEMO="true"
+npm.cmd run db:seed
+Remove-Item Env:SEED_RESET_DEMO
+```
+
+The replacement is transactional and preserves the user's ID. Other accounts are
+untouched. Six additional `demo-1@taxwise.example` through `demo-6@taxwise.example`
+accounts are created with small paid-invoice/expense ledgers and signup/login/delete
+audit fixtures spread over the preceding nine weeks. Their individual random passwords
+are not exposed; they supply admin telemetry. Existing telemetry accounts are skipped.
+Optionally set `SEED_ADMIN_PASSWORD` to create `admin@taxwise.example` with role ADMIN.
+This works independently of `SEED_DEMO_PASSWORD`; an existing admin email is skipped
+even during a demo reset. Both supplied passwords must meet the signup policy.
 
 ## Environment
 
 | Variable | Purpose |
 | --- | --- |
 | `DATABASE_URL` | PostgreSQL connection string; required for database operations and production builds. |
+| `DATABASE_URL_UNPOOLED` | Optional direct Neon URL for Prisma CLI migrations; falls back to `DATABASE_URL` locally. |
 | `JWT_SECRET` | Random secret, at least 32 bytes. Required for signing/verifying sessions. |
+| `CRON_SECRET` | Separate random bearer secret for `/api/cron/daily`; unset means job requests fail closed. |
 | `APP_URL` | Canonical app origin, including protocol and port. Set explicitly in production; mutations require an exact matching Origin header. |
 | `ADMIN_EMAILS` | Comma-separated emails, matched case-insensitively, promoted to ADMIN at signup. |
 | `GEMINI_API_KEY` | Optional Gemini 2.5 Flash expense suggestions; rules fallback on errors/timeouts. |
 | `SEED_DEMO_PASSWORD` | Optional demo password; seed skips if absent. Never set this in production unless deliberately seeding a demo. |
+| `SEED_RESET_DEMO` | Only exact `true` replaces the main demo user's data/profile; defaults to skip. Does not reset other accounts. |
+| `SEED_ADMIN_PASSWORD` | Optional independent ADMIN demo password; skipped when unset or the email already exists. |
 
 Keep `.env` private. The checked-in `.env.example` contains no credentials for deployed services.
 
@@ -56,6 +83,9 @@ Keep `.env` private. The checked-in `.env.example` contains no credentials for d
 | `npm run typecheck` | Generate Prisma client and run strict TypeScript checks. |
 | `npm test` | Run Vitest tests. |
 | `npm run test:coverage` | Vitest with V8 coverage. |
+| `npm run smoke -- <baseUrl>` | HTTP journey with real OCR/PDF generation and API cleanup; localhost or production. |
+| `npm run lint:security` | ESLint security-rule scan; reviewed warnings are explained in the week 10 audit. |
+| `npm run verify:bundle` | After building, assert OCR worker/WASM/language data and PDF fonts are in route traces. |
 | `npm run db:migrate` | Create/apply a development migration. |
 | `npm run db:seed` | Run the optional demo seed. |
 
@@ -66,7 +96,7 @@ Keep `.env` private. The checked-in `.env.example` contains no credentials for d
   current-user/admin guards, input validation, and a bounded in-memory rate limiter.
 - `src/lib/api.ts`: consistent `{ error: { code, message, details? } }` responses,
   JSON validation, payload size checks, and same-origin protection for mutations.
-- `src/middleware.ts`: early JWT-based redirects; protected server layouts also reload
+- `src/proxy.ts`: early JWT-based redirects; protected server layouts also reload
   the active user and current role from the database. APIs must use `requireUser()` or
   `requireAdmin()` and scope domain queries by that user's `id`.
 - `prisma/schema.prisma`: all domain rows include indexed `userId`; composite foreign
@@ -101,6 +131,8 @@ Paid invoices create exactly one linked income entry. Un-paying, voiding, or del
 invoice removes its linked income. Reopen a paid/void invoice before editing its contents.
 `/invoices/[id]/print` provides print CSS for the browser's Save as PDF feature.
 
+Expense rows show the deductible amount after business use and the category factor, with receipt links when attached. Expense list responses also include `totals: { amountCents, deductibleCents }` for all matching filters, independent of pagination; the totals line and mobile expense cards display these deductions.
+
 Collection endpoints: `/api/expenses`, `/api/income`, `/api/clients`, `/api/invoices`, and
 `/api/estimated-payments` support GET/POST; append `/[id]` for GET/PATCH/DELETE.
 All require a session; mutations also require the configured Origin header. Request
@@ -129,7 +161,12 @@ available. Round monetary lines half up to integer cents. QBI uses the simplifie
 below-threshold model. The regular quarterly target is 100% of projected annual tax;
 when safe harbour is enabled, use the lower of this and 100%/110% of prior-year tax.
 Any remainder cents go to later installments. The schedule carries prior-quarter
-overpayments forward and excludes future-dated payments from paid-so-far totals.
+overpayments forward and excludes future-dated payments from paid-so-far totals. The estimator
+keeps allocated payments visible and separately presents current statuses against all payments
+made by the as-of date: Paid, Covered by later payment, Past due (current cumulative
+shortfall), or Upcoming. Cumulative shortfalls overlap and must not be added. The dashboard
+shows the next due date/target and annual target remaining. After the final deadline there
+is no future date; any unpaid annual target remains visible.
 
 Tax estimates are for planning purposes and are not tax advice. W-2 wages, withholding,
 credits, capital gains, and state/local taxes are outside this model.
@@ -138,14 +175,17 @@ For a local live HTTP smoke test, start the app with APP_URL matching its localh
 origin and DATABASE_URL pointing to your local database, then run:
 
 ```sh
-node scripts/smoke-domain.mjs
+npm run smoke -- http://localhost:3000
 ```
 
-Set `SMOKE_APP_URL` if not using port 3000. The script creates disposable accounts,
-checks signup → client → invoice → paid income → expense → estimate, then checks CRUD,
-tenant isolation, validation, profile/dashboard/print routes, and delete audit records.
-It removes only its own test accounts/data afterward; it refuses non-local app/database
-hosts. The server and script must use the same database.
+Pass a different base origin for another port or a deployed app you own. The script
+prints PASS/FAIL for signup → client → invoice → paid income → real receipt OCR →
+reviewed expense → estimate → tax summary PDF → logout. It also checks health,
+notifications and non-admin access. It uses HTTP only and deletes its own domain
+fixtures through the API. The disposable account and audit records remain because
+there is no account-delete API; its email is printed for later administrator cleanup.
+The older `smoke-domain.mjs`, `smoke-receipts-reports.mjs`, and `smoke-ai-admin.mjs`
+remain optional, deeper local/database diagnostics, not the deployment smoke command.
 
 ## Receipt OCR and downloadable reports
 
@@ -167,8 +207,8 @@ Scanned images are stored in PostgreSQL `Receipt.image` (`bytea`) and attached t
 expense transactionally only when the user saves it. Images are private and served with
 `Cache-Control: no-store`; every lookup and attachment is scoped to the session user.
 Deleting an expense deletes its receipt. Cancel in the review form discards its pending
-image. Closing the dialog/tab may leave an unattached scan; each user's pending scans
-older than 24 hours are cleaned up on their next successful scan. At most ten pending
+image. Closing the dialog/tab may leave an unattached scan; the daily job deletes scans
+older than 24 hours, complemented by cleanup on the owner's next successful scan. At most ten pending
 scans per user are retained. The categories now include Computer hardware & equipment
 and Internet & phone, with business-use percentages applied at a 100% category factor.
 
@@ -261,3 +301,36 @@ After building and starting the production app locally, run `node scripts/smoke-
 for an end-to-end HTTP/database check. It creates disposable accounts, bootstraps only
 its own admin fixture, verifies CSV/batch/search/admin flows and existing-session access
 changes, and removes all its fixtures afterward. Both app and database must be local.
+
+## Daily jobs, notifications and deployment
+
+`vercel.json` schedules `GET /api/cron/daily` once daily at 06:00 UTC (Hobby may invoke
+it within that hour). Vercel supplies `Authorization: Bearer <CRON_SECRET>`. Local
+calls must supply the same header. The endpoint has no cookie-based bypass.
+
+The transaction removes only unlinked scans strictly older than 24 hours, creates
+overdue-invoice and upcoming estimated-tax reminders, and writes a `JOB_RUN` audit
+with deletion/creation/check counts. System audit entries have no user actor and
+display as “System job” in the admin viewer. Invoices due today are not overdue.
+Tax reminders cover today through 14 days ahead, including Q4's January deadline.
+Only active users receive reminders; only the versioned 2026 tax year is supported.
+Missed overdue invoices are caught up on the next successful run.
+
+The shell bell shows unread counts and up to 50 reminders, with links and mark-as-read.
+`GET /api/notifications` and `PATCH /api/notifications/[id]` (`{ "read": true }`)
+are tenant-scoped; PATCH also requires the configured Origin. A unique `(userId, key)`
+prevents repeated or concurrent jobs from duplicating an event, even after reading it.
+Invoice reminders are once per invoice/due date; tax reminders once per year/quarter.
+Tax reminders indicate a date, not an unpaid balance; check recorded payments.
+
+CI runs on main pushes/pull requests with Node 22 and PostgreSQL 17. It installs from
+the lockfile, migrates a disposable database, runs lint/typecheck/coverage/build,
+checks bundle traces, and runs the HTTP smoke. Coverage enforces at least 70% lines,
+branches, statements and functions on `src/lib` (database connection glue excluded).
+Real OCR uses bundled assets and runs in CI. The PostgreSQL job integration test is
+enabled with `RUN_DATABASE_TESTS=true` only on a disposable database whose name ends
+in `_test` or `_ci`; otherwise that single test skips cleanly.
+
+See [week 10 security/testing](docs/week-10-security-testing.md) for the route review,
+dependency audit and static scan, and [week 11 deployment](docs/week-11-deployment.md)
+for Neon/Vercel setup, cron verification and production smoke instructions.

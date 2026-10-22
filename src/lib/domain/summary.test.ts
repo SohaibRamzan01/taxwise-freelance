@@ -46,8 +46,15 @@ describe("tax and dashboard aggregation", () => {
     expect(result.monthly[5]).toEqual({ month: "Jun", incomeCents: 10000000, expenseCents: 1000000 });
     expect(result.deductions).toEqual([{ category: "MEALS", label: "Meals", amountCents: 400000 }]);
     expect(result.outstandingInvoices[0].status).toBe("OVERDUE");
-    expect(result.upcomingDeadlines.map(q => q.quarter)).toEqual([1, 2, 3, 4]);
+    expect(result.paymentPlan).toMatchObject({ nextDueDate: "2027-01-15", nextDueCents: result.paymentPlan.remainingCents });
     expect(mock.invoice.findMany.mock.calls[0][0].where).toMatchObject({ userId: "u1" });
+  });
+  it("dashboard uses the current next target instead of stale historical deficits", async () => {
+    mock.user.findUnique.mockResolvedValue({ ...profile, useSafeHarbour: true, priorYearTaxCents: 50169 });
+    mock.estimatedPayment.findMany.mockResolvedValue([{ date: new Date("2026-06-15"), amountCents: 45000, quarter: 2 }]);
+    const result = await dashboard("u1");
+    expect(result.paymentPlan).toMatchObject({ nextDueDate: "2027-01-15", nextDueCents: 5169, remainingCents: 5169 });
+    expect(result.paymentPlan.quarters[0].status).toBe("COVERED_LATER");
   });
   it("updates only allowed profile fields and never returns password or invoice counter fields", async () => {
     await updateSettings("u1", { filingStatus: "HEAD_OF_HOUSEHOLD", businessName: "Studio" });
@@ -58,7 +65,11 @@ describe("tax and dashboard aggregation", () => {
   it("serves validated estimate, dashboard and profile routes", async () => {
     vi.stubEnv("APP_URL", "http://localhost");
     const req = (path: string) => new Request(`http://localhost/api/${path}`);
-    expect((await getEstimate(req("tax/estimate?year=2026&annualise=false"))).status).toBe(200);
+    const response = await getEstimate(req("tax/estimate?year=2026&annualise=false"));
+    expect(response.status).toBe(200);
+    const { data } = await response.json();
+    expect(data.plan.quarters).toHaveLength(4);
+    expect(data.plan).toMatchObject({ nextDueDate: "2027-01-15", nextDueCents: data.schedule.remainingCents });
     expect((await getEstimate(req("tax/estimate?year=2025"))).status).toBe(400);
     expect((await getDashboard(req("dashboard"))).status).toBe(200);
     expect((await getProfile(req("settings"))).status).toBe(200);

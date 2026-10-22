@@ -32,6 +32,20 @@ beforeEach(() => {
   mock.invoice.create.mockResolvedValue(invoiceRow);
 });
 describe("tenant-scoped services", () => {
+  it("totals every filtered expense independently of pagination, using per-row deduction rounding", async () => {
+    const page = [{ id: "meal", amountCents: 10000, businessUsePercent: 80, category: "MEALS", receipt: { id: "receipt1" } }];
+    mock.expense.findMany.mockResolvedValueOnce(page).mockResolvedValueOnce([
+      ...page, { amountCents: 8000, businessUsePercent: 75, category: "INTERNET_PHONE" },
+      { amountCents: 1, businessUsePercent: 100, category: "MEALS" },
+    ]);
+    mock.expense.count.mockResolvedValue(3);
+    const q = listSchema.parse({ search: "client", from: "2026-01-01", to: "2026-10-22", category: "MEALS", page: 2, pageSize: 1 });
+    const result = await listRecords("expenses", "u1", q);
+    expect(result.data).toEqual(page);
+    expect(result.totals).toEqual({ amountCents: 18001, deductibleCents: 10001 });
+    expect(mock.expense.findMany.mock.calls[1][0]).toEqual({ where: listOptions("expenses", "u1", q).where, select: { amountCents: true, businessUsePercent: true, category: true } });
+    expect(result.pagination).toMatchObject({ page: 2, total: 3 });
+  });
   it.each(entities)("creates, reads, updates and deletes %s within the user boundary", async entity => {
     await createRecord(entity, "u1", inputs[entity]);
     expect(tables[entity].create).toHaveBeenCalledWith({ data: expect.objectContaining({ userId: "u1" }) });
@@ -58,11 +72,16 @@ describe("tenant-scoped services", () => {
     for (const status of ["SENT", "OVERDUE"] as const) expect(listOptions("invoices", "u1", listSchema.parse({ status }), "2026-06-15").where).toMatchObject({ status: { in: ["SENT", "OVERDUE"] }, dueDate: { [status === "SENT" ? "gte" : "lt"]: new Date("2026-06-15") } });
     expect(listOptions("invoices", "u1", listSchema.parse({ status: "PAID" })).where.status).toBe("PAID");
   });
-  it("returns 404 without mutating or auditing another tenant's row", async () => {
-    mock.expense.findFirst.mockResolvedValue(null);
-    await expect(updateRecord("expenses", "u1", "foreign", { vendor: "Bad" })).rejects.toMatchObject({ status: 404 });
-    await expect(deleteRecord("expenses", "u1", "foreign")).rejects.toMatchObject({ status: 404 });
-    expect(mock.expense.update).not.toHaveBeenCalled(); expect(mock.expense.delete).not.toHaveBeenCalled(); expect(mock.auditLog.create).not.toHaveBeenCalled();
+  it.each([...entities, "invoices"] as Entity[])("returns 404 for foreign reads, updates and deletes of %s without mutation or audit", async entity => {
+    const table = tables[entity];
+    // Simulate real tenant filtering: B's record exists but never matches A's predicate.
+    table.findFirst.mockImplementation(async ({ where }) => where.userId === "user-b" ? { id: "foreign", userId: "user-b" } : null);
+    expect(await getRecord(entity, "user-b", "foreign")).toMatchObject({ id: "foreign" });
+    await expect(getRecord(entity, "u1", "foreign")).rejects.toMatchObject({ status: 404 });
+    await expect(updateRecord(entity, "u1", "foreign", entity === "invoices" ? { status: "SENT" } : { notes: "Bad" })).rejects.toMatchObject({ status: 404 });
+    await expect(deleteRecord(entity, "u1", "foreign")).rejects.toMatchObject({ status: 404 });
+    expect(table.findFirst).toHaveBeenLastCalledWith(expect.objectContaining({ where: { id: "foreign", userId: "u1" } }));
+    expect(table.update).not.toHaveBeenCalled(); expect(table.delete).not.toHaveBeenCalled(); expect(mock.auditLog.create).not.toHaveBeenCalled();
   });
   it("blocks direct changes to invoice-linked income", async () => {
     mock.income.findFirst.mockResolvedValue({ id: "r1", invoiceId: "invoice1" });
@@ -142,6 +161,18 @@ describe("authenticated domain routes", () => {
     mock.requireUser.mockRejectedValue(new ApiError(401, "UNAUTHORIZED", "Sign in."));
     expect((await collectionRoutes("expenses").GET(request())).status).toBe(401);
     expect((await collectionRoutes("expenses").POST(new Request("http://localhost/api/expenses", { method: "POST" }))).status).toBe(403);
+    vi.unstubAllEnvs();
+  });
+  it.each([...entities, "invoices"] as Entity[])("protects every %s CRUD route and hides foreign IDs", async entity => {
+    vi.stubEnv("APP_URL", "http://localhost");
+    const collection = collectionRoutes(entity), item = itemRoutes(entity), ctx = { params: Promise.resolve({ id: "foreign" }) };
+    tables[entity].findFirst.mockResolvedValue(null);
+    for (const [handler, method, body] of [[item.GET, "GET", undefined], [item.PATCH, "PATCH", { notes: "Bad" }], [item.DELETE, "DELETE", undefined]] as const) expect((await handler(request(method, body), ctx)).status).toBe(404);
+    expect(tables[entity].update).not.toHaveBeenCalled(); expect(tables[entity].delete).not.toHaveBeenCalled();
+    mock.requireUser.mockRejectedValue(new ApiError(401, "UNAUTHORIZED", "Sign in"));
+    expect((await collection.GET(request())).status).toBe(401);
+    expect((await collection.POST(request("POST", {}))).status).toBe(401);
+    for (const [handler, method] of [[item.GET, "GET"], [item.PATCH, "PATCH"], [item.DELETE, "DELETE"]] as const) expect((await handler(request(method, method === "PATCH" ? {} : undefined), ctx)).status).toBe(401);
     vi.unstubAllEnvs();
   });
 });

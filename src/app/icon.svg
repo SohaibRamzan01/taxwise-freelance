@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36">
+  <title>TaxWise Freelance</title>
+  <path fill="#087f70" d="M10 0h16a10 10 0 0 1 10 10v16a10 10 0 0 1-10 10H2a2 2 0 0 1-2-2V10A10 10 0 0 1 10 0Z"/>
+  <g fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" transform="translate(6 6)">
+    <path d="M12 16v5M16 14.639V21M20 10.656V21m2-18-8.646 8.646a.5.5 0 0 1-.708 0L9.354 8.354a.5.5 0 0 0-.707 0L2 15M4 18.463V21M8 14.656V21"/>
+  </g>
+</svg>

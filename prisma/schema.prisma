@@ -81,6 +81,7 @@ model User {
   income               Income[]
   estimatedPayments    EstimatedPayment[]
   auditLogs            AuditLog[]
+  notifications        Notification[]
 }
 
 model Client {
@@ -228,16 +229,31 @@ model EstimatedPayment {
 
 model AuditLog {
   id         String   @id @default(cuid())
-  userId     String
+  userId     String?
   action     String
   entityType String?
   entityId   String?
   metadata   Json?
   createdAt  DateTime @default(now())
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user       User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([userId, createdAt])
   @@index([userId, action])
   @@index([createdAt])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String
+  key       String
+  title     String
+  body      String
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, key])
+  @@index([userId, readAt, createdAt])
 }

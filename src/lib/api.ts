@@ -24,8 +24,23 @@ export async function parseJson<T>(request: Request, schema: z.ZodType<T>, maxBy
   if (!request.headers.get("content-type")?.toLowerCase().startsWith("application/json")) {
     throw new ApiError(415, "UNSUPPORTED_MEDIA_TYPE", "Send JSON with Content-Type application/json.");
   }
-  const body = await request.text();
-  if (new TextEncoder().encode(body).length > maxBytes) throw new ApiError(413, "PAYLOAD_TOO_LARGE", "Request is too large.");
+  const tooLarge = () => new ApiError(413, "PAYLOAD_TOO_LARGE", "Request is too large.");
+  if (Number(request.headers.get("content-length")) > maxBytes) throw tooLarge();
+  const reader = request.body?.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  if (reader) {
+    try {
+      while (true) {
+        const part = await reader.read();
+        if (part.done) break;
+        size += part.value.length;
+        if (size > maxBytes) { await reader.cancel(); throw tooLarge(); }
+        chunks.push(part.value);
+      }
+    } finally { reader.releaseLock(); }
+  }
+  const body = new TextDecoder().decode(Buffer.concat(chunks));
   let json: unknown;
   try { json = JSON.parse(body); } catch { throw new ApiError(400, "INVALID_JSON", "Request body must be valid JSON."); }
   return schema.parse(json);

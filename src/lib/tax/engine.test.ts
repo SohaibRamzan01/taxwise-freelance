@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { annualEstimate, deductibleAmount, federalIncomeTax, isoDate, qualifiedBusinessIncome, quarterlySchedule, roundedRatio, rules2026 as rules, selfEmploymentTax, type FilingStatus } from ".";
+import { annualEstimate, deductibleAmount, federalIncomeTax, isoDate, qualifiedBusinessIncome, quarterlySchedule, quarterlyPresentation, roundedRatio, rules2026 as rules, selfEmploymentTax, type FilingStatus } from ".";
 
 describe("integer-cent deductions and rounding", () => {
   it("applies business use and the meals factor, rounding only the final result", () => {
@@ -17,6 +17,38 @@ describe("integer-cent deductions and rounding", () => {
     expect(() => roundedRatio(Number.MAX_SAFE_INTEGER, 2, 1)).toThrow();
     for (const date of ["2026-02-29", "2026-13-01", "bad"]) expect(() => isoDate(date)).toThrow();
     expect(isoDate("2024-02-29").getUTCDate()).toBe(29);
+  });
+});
+describe("current quarterly presentation", () => {
+  const input = { totalTaxCents: 50169, priorYearTaxCents: 0, priorYearAgiCents: 0, useSafeHarbour: false, asOf: "2026-10-22", payments: [{ quarter: 2, date: "2026-06-15", amountCents: 45000 }] };
+  it("clears historical shortfalls covered by a later allocated payment", () => {
+    const schedule = quarterlySchedule(input, rules);
+    const plan = quarterlyPresentation(schedule, input.asOf);
+    expect(schedule.quarters[0].remainingCents).toBe(12542); // Preserve allocation history.
+    expect(plan.quarters.map(q => q.status)).toEqual(["COVERED_LATER", "PAID", "PAID", "UPCOMING"]);
+    expect(plan.quarters.slice(0, 3).map(q => q.currentShortfallCents)).toEqual([0, 0, 0]);
+    expect(plan).toMatchObject({ nextDueDate: "2027-01-15", nextDueCents: 5169, remainingCents: 5169 });
+  });
+  it("shows only the remaining current cumulative deficit as past due", () => {
+    const plan = quarterlyPresentation(quarterlySchedule({ ...input, payments: [{ quarter: 2, date: "2026-06-15", amountCents: 15000 }] }, rules), input.asOf);
+    expect(plan.quarters.map(q => q.status)).toEqual(["COVERED_LATER", "PAST_DUE", "PAST_DUE", "UPCOMING"]);
+    expect(plan.quarters.map(q => q.currentShortfallCents)).toEqual([0, 10084, 22626, 35169]);
+  });
+  it("handles early overpayments, zero tax, safe harbour and dates after the last deadline", () => {
+    const overpaid = quarterlyPresentation(quarterlySchedule({ ...input, payments: [{ quarter: 1, date: "2026-04-01", amountCents: 60000 }] }, rules), input.asOf);
+    expect(overpaid.quarters.every(q => q.status === "PAID")).toBe(true);
+    expect(overpaid.nextDueCents).toBe(0);
+    const zero = quarterlyPresentation(quarterlySchedule({ ...input, useSafeHarbour: true }, rules), input.asOf);
+    expect(zero.quarters.every(q => q.status === "PAID")).toBe(true);
+    const ended = quarterlyPresentation(quarterlySchedule({ ...input, asOf: "2027-01-16" }, rules), "2027-01-16");
+    expect(ended).toMatchObject({ nextDueDate: null, nextDueCents: 0, remainingCents: 5169 });
+    expect(ended.quarters[3]).toMatchObject({ status: "PAST_DUE", currentShortfallCents: 5169 });
+  });
+  it("excludes future payments and treats the deadline itself as upcoming", () => {
+    const asOf = "2026-06-15";
+    const plan = quarterlyPresentation(quarterlySchedule({ ...input, asOf, payments: [{ quarter: 2, date: "2026-06-16", amountCents: 45000 }] }, rules), asOf);
+    expect(plan.quarters.map(q => q.status)).toEqual(["PAST_DUE", "UPCOMING", "UPCOMING", "UPCOMING"]);
+    expect(plan).toMatchObject({ nextDueDate: asOf, nextDueCents: 25084, remainingCents: 50169 });
   });
 });
 describe("self-employment tax", () => {

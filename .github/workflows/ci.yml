@@ -1,0 +1,52 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: taxwise_ci
+        ports: [5432:5432]
+        options: >-
+          --health-cmd pg_isready --health-interval 10s
+          --health-timeout 5s --health-retries 5
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/taxwise_ci
+      JWT_SECRET: ci-only-dummy-jwt-secret-at-least-32-bytes
+      CRON_SECRET: ci-only-dummy-cron-secret-at-least-32-bytes
+      APP_URL: http://localhost:3000
+      RUN_DATABASE_TESTS: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npx prisma migrate deploy
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run test:coverage
+      - run: npm run build:local
+      - run: npm run verify:bundle
+      - name: HTTP journey with real OCR and PDF generation
+        run: |
+          npm start > /tmp/taxwise-server.log 2>&1 &
+          trap 'cat /tmp/taxwise-server.log' EXIT
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://localhost:3000/api/health; then break; fi
+            sleep 1
+          done
+          npm run smoke -- http://localhost:3000

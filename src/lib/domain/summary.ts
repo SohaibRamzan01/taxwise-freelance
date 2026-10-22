@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { ApiError } from "@/lib/api";
-import { annualEstimate, quarterlySchedule, deductibleAmount, categories, rules2026 } from "@/lib/tax";
+import { annualEstimate, quarterlySchedule, quarterlyPresentation, deductibleAmount, categories, rules2026 } from "@/lib/tax";
 import { today } from "./service";
 import { effectiveStatus } from "./invoices";
 import { settingsSchema } from "./validation";
@@ -31,11 +31,11 @@ export async function taxSummary(userId: string, options: { year?: number; asOf?
   const deductionsCents = expenses.reduce((sum, row) => sum + deductibleAmount(row.amountCents, row.businessUsePercent, row.category), 0);
   const estimate = annualEstimate({ incomeCents, deductionsCents, filingStatus: profile.filingStatus, asOf, annualise: options.annualise }, rules2026);
   const schedule = quarterlySchedule({ ...profile, totalTaxCents: estimate.totalTaxCents, asOf, payments: payments.map(p => ({ ...p, date: p.date.toISOString().slice(0, 10) })) }, rules2026);
-  return { profile, estimate, schedule, income, expenses, payments };
+  return { profile, estimate, schedule, plan: quarterlyPresentation(schedule, asOf), income, expenses, payments };
 }
 
 export async function dashboard(userId: string) {
-  const { profile, estimate, schedule, income, expenses } = await taxSummary(userId);
+  const { profile, estimate, schedule, plan, income, expenses } = await taxSummary(userId);
   const invoices = await db.invoice.findMany({ where: { userId, status: { in: ["SENT", "OVERDUE"] } }, include: { client: true }, orderBy: [{ dueDate: "asc" }, { id: "asc" }] });
   const monthly = Array.from({ length: 12 }, (_, month) => ({ month: new Date(Date.UTC(estimate.year, month, 1)).toLocaleString("en-US", { month: "short", timeZone: "UTC" }), incomeCents: 0, expenseCents: 0 }));
   income.forEach(row => { monthly[row.date.getUTCMonth()].incomeCents += row.amountCents; });
@@ -44,6 +44,6 @@ export async function dashboard(userId: string) {
   return { year: estimate.year, currency: profile.currency,
     kpis: { incomeCents: estimate.ytdIncomeCents, expenseCents: expenses.reduce((sum, row) => sum + row.amountCents, 0), deductionsCents: estimate.ytdDeductionsCents, estimatedTaxOwedCents: schedule.estimatedBalanceCents, nextDueDate: schedule.nextDueDate, outstandingCents: invoices.reduce((sum, row) => sum + row.totalCents, 0) },
     monthly, deductions, outstandingInvoices: invoices.slice(0, 10).map(row => ({ ...row, status: effectiveStatus(row, today()) })),
-    upcomingDeadlines: schedule.quarters.filter(q => q.dueDate >= today() || q.overdue),
+    paymentPlan: plan,
   };
 }

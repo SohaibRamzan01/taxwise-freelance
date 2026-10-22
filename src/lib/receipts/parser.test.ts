@@ -30,4 +30,9 @@ describe("receipt parser", () => {
     expect(parseReceiptText("Shop\nFoo 12 2026").date).toBeNull();
     expect(parseReceiptText("A".repeat(300)).vendor).toHaveLength(200);
   });
+  it("rejects very long numeric OCR tokens while retaining valid grouped totals", () => {
+    expect(parseReceiptText(`Shop\nTOTAL ${"9".repeat(100000)}.00`).totalCents).toBeNull();
+    expect(parseReceiptText("Shop\nTOTAL $21,474,836.47").totalCents).toBe(2147483647);
+    expect(parseReceiptText("Shop\nTOTAL 1 234.56").totalCents).toBe(123456);
+  });
 });

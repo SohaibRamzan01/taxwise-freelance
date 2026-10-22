@@ -19,7 +19,7 @@ function extractDate(text: string) {
 }
 function amounts(line: string) {
   // Correct O/I only inside numeric tokens. Decimals exclude dates/phones/order numbers.
-  return [...line.matchAll(/(?:^|[^\w.,-])(?:[$€£]\s*)?([\dOI]+(?:[, ][\dOI]{3})*(?:\.[\dOI]{2})|[\dOI]+,[\dOI]{2})(?![\w.,])/gi)].map(match => {
+  return [...line.matchAll(/(?:^|[^\w.,-])(?:[$€£]\s{0,3})?([\dOI]{1,10}(?:[, ][\dOI]{3}){0,3}(?:\.[\dOI]{2})|[\dOI]{1,10},[\dOI]{2})(?![\w.,])/gi)].map(match => {
     const token = match[1].replace(/o/gi, "0").replace(/i/gi, "1").replaceAll(" ", "");
     const decimal = token.includes(".") ? token.replaceAll(",", "") : token.replace(",", ".");
     const [whole, fraction] = decimal.split(".");
