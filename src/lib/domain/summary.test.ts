@@ -46,14 +46,14 @@ describe("tax and dashboard aggregation", () => {
     expect(result.monthly[5]).toEqual({ month: "Jun", incomeCents: 10000000, expenseCents: 1000000 });
     expect(result.deductions).toEqual([{ category: "MEALS", label: "Meals", amountCents: 400000 }]);
     expect(result.outstandingInvoices[0].status).toBe("OVERDUE");
-    expect(result.paymentPlan).toMatchObject({ nextDueDate: "2027-01-15", nextDueCents: result.paymentPlan.remainingCents });
+    expect(result.paymentPlan).toMatchObject({ method: "REGULAR", nextDueDate: "2027-01-15", nextDueCents: result.paymentPlan.remainingCents });
     expect(mock.invoice.findMany.mock.calls[0][0].where).toMatchObject({ userId: "u1" });
   });
   it("dashboard uses the current next target instead of stale historical deficits", async () => {
     mock.user.findUnique.mockResolvedValue({ ...profile, useSafeHarbour: true, priorYearTaxCents: 50169 });
     mock.estimatedPayment.findMany.mockResolvedValue([{ date: new Date("2026-06-15"), amountCents: 45000, quarter: 2 }]);
     const result = await dashboard("u1");
-    expect(result.paymentPlan).toMatchObject({ nextDueDate: "2027-01-15", nextDueCents: 5169, remainingCents: 5169 });
+    expect(result.paymentPlan).toMatchObject({ method: "SAFE_HARBOUR", nextDueDate: "2027-01-15", nextDueCents: 5169, remainingCents: 5169 });
     expect(result.paymentPlan.quarters[0].status).toBe("COVERED_LATER");
   });
   it("updates only allowed profile fields and never returns password or invoice counter fields", async () => {

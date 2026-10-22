@@ -2,6 +2,7 @@
 import { notify } from "@/components/notifications";
 import { useEffect, useRef, useState } from "react";
 import type { parseReceiptText } from "@/lib/receipts/parser";
+import { prepareReceiptImage } from "@/lib/receipts/client-image";
 import { categories } from "@/lib/tax/categories";
 import { api, ErrorBox } from "./common";
 import { RecordForm } from "./records";
@@ -13,14 +14,17 @@ export function ReceiptScanner({ done, close }: { done: () => void; close: () =>
   useEffect(() => { active.current = true; return () => { active.current = false; controller.current?.abort(); }; }, []);
   async function upload(file?: File) {
     if (!file || pending) return;
-    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 5 * 1024 * 1024 || !file.size) { setError("Choose a JPG, PNG or WebP image, up to 5 MB."); notify("Choose a JPG, PNG or WebP image, up to 5 MB.", "error"); return; }
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || !file.size) { setError("Choose a non-empty JPG, PNG or WebP photo."); notify("Choose a non-empty JPG, PNG or WebP photo.", "error"); return; }
     setPending(true); setError("");
     const abort = new AbortController(); controller.current = abort;
     let timedOut = false;
     const timer = setTimeout(() => { timedOut = true; abort.abort(); }, 45000);
     try {
-      const form = new FormData(); form.set("image", file);
+      const image = await prepareReceiptImage(file);
+      abort.signal.throwIfAborted();
+      const form = new FormData(); form.set("image", image);
       const response = await fetch("/api/receipts/scan", { method: "POST", body: form, signal: abort.signal });
+      if (response.status === 413) throw new Error("This photo is too large to upload. Try cropping it or taking a closer photo of just the receipt.");
       const result = await response.json();
       if (!response.ok) throw new Error(result.error?.message || "Scanning failed. You can still enter the expense manually.");
       if (active.current) { setScan(result.data); notify("Receipt scanned. Review before saving."); }
@@ -37,11 +41,11 @@ export function ReceiptScanner({ done, close }: { done: () => void; close: () =>
   if (manual) return <RecordForm entity="expenses" done={done} close={close} />;
   return <>
     {!scan && <><div className={`receipt-drop${dragging ? " dragging" : ""}`} onDragOver={e => { e.preventDefault(); setDragging(true); }} onDragLeave={() => setDragging(false)} onDrop={e => { e.preventDefault(); setDragging(false); if (e.dataTransfer.files.length !== 1) setError("Drop one receipt at a time."); else void upload(e.dataTransfer.files[0]); }}>
-      <h3>Drop a receipt here</h3><p>JPG, PNG or WebP · up to 5 MB</p>
+      <h3>Drop a receipt here</h3><p>JPG, PNG or WebP · large photos are resized automatically before upload.</p>
       <label className="field">Choose an image<input aria-label="Receipt image" type="file" accept="image/jpeg,image/png,image/webp" disabled={pending} onChange={e => void upload(e.target.files?.[0])} /></label>
       <label className="field">Take a photo<input aria-label="Take receipt photo" type="file" accept="image/*" capture="environment" disabled={pending} onChange={e => void upload(e.target.files?.[0])} /></label>
       <p className="small muted">Try a sample: <a className="text-link" href="/samples/hardware.png" download>Hardware</a> · <a className="text-link" href="/samples/internet.png" download>Internet</a> · <a className="text-link" href="/samples/meals.png" download>Meals</a></p>
-    </div>{pending && <p role="status" aria-live="polite">Reading receipt… <progress aria-label="Scanning receipt" /> This may take up to 30 seconds.</p>}</>}
+    </div>{pending && <p role="status" aria-live="polite">Preparing photo and reading receipt… <progress aria-label="Scanning receipt" /> This may take up to 45 seconds.</p>}</>}
     {error && <ErrorBox message={error} />}
     {scan ? <><p className="success-message">Receipt scanned. Review every field before saving.</p><p><span className="status">Auto</span> {categories[scan.suggestion.category].label}{scan.suggestion.matchedKeyword && ` · matched “${scan.suggestion.matchedKeyword}”`}. You can change the category below.</p>
       <a className="text-link" href={`/api/receipts/${scan.receiptId}`} target="_blank" rel="noreferrer">View uploaded receipt</a>

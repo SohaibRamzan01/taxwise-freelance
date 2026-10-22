@@ -44,6 +44,6 @@ export async function dashboard(userId: string) {
   return { year: estimate.year, currency: profile.currency,
     kpis: { incomeCents: estimate.ytdIncomeCents, expenseCents: expenses.reduce((sum, row) => sum + row.amountCents, 0), deductionsCents: estimate.ytdDeductionsCents, estimatedTaxOwedCents: schedule.estimatedBalanceCents, nextDueDate: schedule.nextDueDate, outstandingCents: invoices.reduce((sum, row) => sum + row.totalCents, 0) },
     monthly, deductions, outstandingInvoices: invoices.slice(0, 10).map(row => ({ ...row, status: effectiveStatus(row, today()) })),
-    paymentPlan: plan,
+    paymentPlan: { ...plan, method: schedule.method },
   };
 }

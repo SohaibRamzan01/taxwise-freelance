@@ -40,6 +40,9 @@ describe("midterm demo ledger", () => {
     const estimate = annualEstimate({ incomeCents, deductionsCents, filingStatus: "SINGLE", asOf }, rules2026);
     const schedule = quarterlySchedule({ totalTaxCents: estimate.totalTaxCents, priorYearTaxCents: 1600000, priorYearAgiCents: 7800000, useSafeHarbour: true, asOf, payments: demoPayments.map(p => ({ ...p, date: p.date.toISOString().slice(0, 10) })) }, rules2026);
     expect(schedule.method).toBe("SAFE_HARBOUR");
+    // The dashboard balance is projected tax less payments, not the safe-harbour remainder.
+    expect(estimate.totalTaxCents).toBe(1965784);
+    expect(schedule).toMatchObject({ paidSoFarCents: 1185000, estimatedBalanceCents: 780784, requiredAnnualCents: 1600000, remainingCents: 415000 });
     const plan = quarterlyPresentation(schedule, asOf);
     expect(plan.quarters.map(q => q.status)).toEqual(["PAID", "PAID", "PAST_DUE", "UPCOMING"]);
     expect(plan.quarters[2].currentShortfallCents).toBe(15000);

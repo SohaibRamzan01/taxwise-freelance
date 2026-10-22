@@ -63,11 +63,17 @@ After adding a custom domain or changing environment values, update APP_URL and 
 caps keep both within the task's Hobby budget. Review your project's current
 [function limits](https://vercel.com/docs/functions/limitations) when changing workloads.
 
-Vercel limits request/response payloads to **4.5 MB**, including multipart overhead. The app's own
-receipt limit remains 5 MiB for self-hosted use. On Vercel, use images below roughly 4 MB; larger images
-can receive a platform 413 before application code runs. Supporting the full 5 MiB on Vercel would
-require a separate direct-upload/storage flow, outside this task. Large PDFs/private image responses
-also remain subject to the platform's response limit. [Vercel documents this limit here.](https://vercel.com/docs/functions/limitations#request-body-size)
+Vercel limits request/response payloads to **4.5 MB**, including multipart overhead. Phone photos in
+JPG, PNG or WebP now work through the receipt scanner: before upload, the browser applies EXIF
+orientation and, when a photo exceeds 1.5 MiB or 2000 px on either edge, resizes it to at most 2000 px
+on the long edge and encodes JPEG at quality 0.85. Smaller photos are uploaded unchanged. The scanner
+allows the final image only up to 4,000,000 bytes, leaving room for multipart headers; if it is still
+too large, it asks the user to crop or retake it. A phone photo can exceed 5 MiB before preparation.
+Use a browser with `createImageBitmap` support; unsupported or unreadable images receive a friendly
+error with a manual-entry option. HEIC is not supported; choose JPG, PNG or WebP instead.
+The server's 5 MiB limit and MIME/magic-byte checks remain unchanged. Direct API uploads and large
+PDFs/private image responses remain subject to the platform limit.
+[Vercel documents this limit here.](https://vercel.com/docs/functions/limitations#request-body-size)
 
 ## 5. Optional seed
 

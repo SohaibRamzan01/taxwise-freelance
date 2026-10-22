@@ -85,7 +85,7 @@ If the photo cannot be read, the user simply types the details — the app never
 
 # 6. The working app (screenshots)
 
-<img class="shot" src="../assets/screens/dashboard-desktop.png" alt="Dashboard">
+<img class="shot" src="../assets/screens/dashboard-desktop-top.png" alt="Dashboard">
 <div class="caption">Figure 2 — Dashboard: year-to-date totals, monthly chart, deductions by category, unpaid invoices and tax deadlines</div>
 
 <img class="shot" src="../assets/screens/expenses-desktop-top.png" alt="Expenses">
