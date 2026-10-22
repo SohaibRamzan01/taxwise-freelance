@@ -123,6 +123,9 @@ td.nw { white-space: nowrap; }
 .wf .box { flex: 1; border: 1px dashed #94a3b8; border-radius: 4px; padding: 2mm; min-height: 9mm; }
 .wf .btn { display: inline-block; background: #cbd5e1; border-radius: 4px; padding: 1mm 3mm; font-weight: 700; }
 .pb { page-break-before: always; }
+.shot { display: block; margin: 3mm auto 1mm; max-width: 100%; max-height: 200mm; border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 2px 10px rgba(15,61,58,.08); page-break-inside: avoid; }
+.shots { display: grid; grid-template-columns: 1fr; gap: 5mm; align-items: start; }
+.shots .shot { width: 100%; max-height: none; }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
