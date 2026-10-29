@@ -16,3 +16,4 @@ orchestration/logs/
 /vercel/
 /.vercel/
 reports/weekly/build/
+orchestration/design/

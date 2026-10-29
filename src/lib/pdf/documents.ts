@@ -2,7 +2,7 @@
 import { formatMoney } from "@/lib/money";
 import type { TaxSummary } from "@/lib/reports/summary";
 type Doc = PDFKit.PDFDocument;
-const ink = "#193e39", muted = "#64736e";
+const ink = "#14213D", muted = "#44506A";
 function document(title: string, render: (doc: Doc) => void): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: "A4", margin: 48, bufferPages: true, info: { Title: title, Creator: "TaxWise Freelance" } });
@@ -38,7 +38,7 @@ function row(doc: Doc, cells: string[], widths: number[], bold = false) {
   const height = Math.max(...cells.map((cell, i) => doc.heightOfString(cell, { width: widths[i] - 14 }))) + 16;
   space(doc, height); const y = doc.y; let x = 48;
   cells.forEach((cell, i) => { doc.text(cell, x + 5, y + 6, { width: widths[i] - 14, align: i === cells.length - 1 ? "right" : "left" }); x += widths[i]; });
-  doc.moveTo(48, y + height).lineTo(547, y + height).strokeColor("#dbe4df").lineWidth(0.5).stroke(); doc.x = 48; doc.y = y + height;
+  doc.moveTo(48, y + height).lineTo(547, y + height).strokeColor("#DCE2EA").lineWidth(0.5).stroke(); doc.x = 48; doc.y = y + height;
 }
 function title(doc: Doc, label: string, subtitle: string) {
   doc.font("Helvetica-Bold").fontSize(25).fillColor(ink).text(label, { width: 499 }).moveDown(0.3);
