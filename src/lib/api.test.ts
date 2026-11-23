@@ -11,6 +11,13 @@ describe("API utilities", () => {
       expect(() => assertSameOrigin(new Request("http://internal/api", { headers: origin ? { origin } : {} }))).toThrow("origin");
     }
   });
+  it("permits loopback address aliases and matching request origins", () => {
+    vi.stubEnv("APP_URL", "http://localhost:3000");
+    expect(() => assertSameOrigin(new Request("http://127.0.0.1:3000/api", { headers: { origin: "http://127.0.0.1:3000" } }))).not.toThrow();
+    expect(() => assertSameOrigin(new Request("http://localhost:3000/api", { headers: { origin: "http://127.0.0.1:3000" } }))).not.toThrow();
+    expect(() => assertSameOrigin(new Request("http://127.0.0.1:3000/api", { headers: { origin: "http://localhost:3000" } }))).not.toThrow();
+    expect(() => assertSameOrigin(new Request("http://localhost:3000/api", { headers: { origin: "http://localhost:3001" } }))).toThrow("origin");
+  });
   it("validates JSON and rejects malformed, unsupported, or oversized payloads", async () => {
     const schema = z.object({ name: z.string() });
     const request = (body: string, type = "application/json") => new Request("http://localhost/api", { method: "POST", headers: { "content-type": type }, body });

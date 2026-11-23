@@ -15,9 +15,24 @@ export function errorResponse(error: unknown) {
 }
 
 export function assertSameOrigin(request: Request) {
-  const allowedOrigin = new URL(process.env.APP_URL || request.url).origin;
   const origin = request.headers.get("origin");
-  if (origin !== allowedOrigin) throw new ApiError(403, "INVALID_ORIGIN", "Request origin is not allowed.");
+  if (!origin) throw new ApiError(403, "INVALID_ORIGIN", "Request origin is not allowed.");
+
+  const allowedOrigin = new URL(process.env.APP_URL || request.url).origin;
+  const requestOrigin = new URL(request.url).origin;
+
+  if (origin === allowedOrigin || origin === requestOrigin) return;
+
+  const isLoopback = (host: string) => host === "localhost" || host === "127.0.0.1";
+  try {
+    const originUrl = new URL(origin);
+    const allowedUrl = new URL(allowedOrigin);
+    if (isLoopback(originUrl.hostname) && isLoopback(allowedUrl.hostname) && originUrl.port === allowedUrl.port) {
+      return;
+    }
+  } catch {}
+
+  throw new ApiError(403, "INVALID_ORIGIN", "Request origin is not allowed.");
 }
 
 export async function parseJson<T>(request: Request, schema: z.ZodType<T>, maxBytes = 16_384): Promise<T> {
