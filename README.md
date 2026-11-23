@@ -64,7 +64,8 @@ even during a demo reset. Both supplied passwords must meet the signup policy.
 | `CRON_SECRET` | Separate random bearer secret for `/api/cron/daily`; unset means job requests fail closed. |
 | `APP_URL` | Canonical app origin, including protocol and port. Set explicitly in production; mutations require an exact matching Origin header. |
 | `ADMIN_EMAILS` | Comma-separated emails, matched case-insensitively, promoted to ADMIN at signup. |
-| `GEMINI_API_KEY` | Optional Gemini 2.5 Flash expense suggestions; rules fallback on errors/timeouts. |
+| `GEMINI_API_KEY` | Optional Gemini expense suggestions; rules fallback on errors/timeouts (failures are logged without the key or expense data). |
+| `GEMINI_MODEL` | Optional model override; defaults to `gemini-3.8-flash`. |
 | `SEED_DEMO_PASSWORD` | Optional demo password; seed skips if absent. Never set this in production unless deliberately seeding a demo. |
 | `SEED_RESET_DEMO` | Only exact `true` replaces the main demo user's data/profile; defaults to skip. Does not reset other accounts. |
 | `SEED_ADMIN_PASSWORD` | Optional independent ADMIN demo password; skipped when unset or the email already exists. |
