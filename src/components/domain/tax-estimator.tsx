@@ -6,26 +6,170 @@ import { taxPaymentLabels } from "@/lib/tax/labels";
 import type { AnnualEstimate, QuarterlySchedule, quarterlyPresentation } from "@/lib/tax";
 import { Disclaimer, ErrorBox, Loading, Modal, PageTitle, useResource } from "./common";
 import { RecordForm, type RecordRow } from "./records";
+import { LedgerStrip, type LedgerCellItem } from "./ledger-strip";
 
 export function TaxEstimatorPage() {
-  const [annualise, setAnnualise] = useState(true); const [asOf, setAsOf] = useState(new Date().toISOString().slice(0, 10)); const [record, setRecord] = useState(false);
+  const [annualise, setAnnualise] = useState(true);
+  const [asOf, setAsOf] = useState(new Date().toISOString().slice(0, 10));
+  const [record, setRecord] = useState(false);
   const resource = useResource<{ data: { estimate: AnnualEstimate; schedule: QuarterlySchedule; plan: ReturnType<typeof quarterlyPresentation>; payments: RecordRow[] } }>(`/api/tax/estimate?year=2026&annualise=${annualise}&asOf=${asOf}`);
   const d = resource.data?.data;
   const taxLabels = d && taxPaymentLabels(d.estimate.year, d.schedule.method, d.estimate.annualised);
-  return <><PageTitle title="A clearer tax picture" description="See how your business activity becomes a quarterly payment plan." action={<button className="button" onClick={() => setRecord(true)}>Record payment</button>} />
-    <div className="toolbar"><label className="filter-label">Tax year<select aria-label="Tax year"><option>2026</option></select></label><label className="filter-label">As of<input type="date" min="2026-01-01" max={new Date().toISOString().slice(0, 10)} required value={asOf} onChange={e => setAsOf(e.target.value)} /></label><label className="checkbox-label"><input type="checkbox" checked={annualise} onChange={e => setAnnualise(e.target.checked)} />Annualise YTD figures</label><Link href="/settings" className="text-link">Filing status & safe harbour</Link></div>
-    {resource.loading && <Loading />}{resource.error && <ErrorBox message={resource.error} retry={resource.refresh} />}{d && <>
-      <p><span className="pill">{taxLabels?.method}</span></p>
-      <div className="stats-grid">{[
-        [d.estimate.annualised ? "Projected annual tax" : "Tax on actual YTD earnings", d.estimate.totalTaxCents, "Estimated federal tax before subtracting payments."],
-        ["Paid so far", d.schedule.paidSoFarCents, "Recorded payments for this tax year through the as-of date."],
-        [taxLabels?.balance, d.schedule.estimatedBalanceCents, taxLabels?.balanceHint],
-        [taxLabels?.target, d.schedule.remainingCents, taxLabels?.targetHint],
-      ].map(([label, value, hint]) => <div className="stat" key={String(label)}><div className="stat-label">{label}</div><div className="stat-value"><span className="money">{formatMoney(Number(value))}</span></div><p className="muted small">{hint}</p></div>)}</div>
-      <div className="chart-grid"><section className="panel"><h2>Your calculation, line by line</h2><p className="muted small">{d.estimate.annualised ? `YTD figures × ${d.estimate.yearDays} / ${d.estimate.elapsedDays} elapsed days` : "Actual YTD figures; no annualisation"} · {d.estimate.filingStatus.replaceAll("_", " ")}</p><table className="breakdown"><tbody>{[
-        ["YTD income", d.estimate.ytdIncomeCents], ["YTD deductions", d.estimate.ytdDeductionsCents], ["Projected income", d.estimate.incomeCents], ["Projected deductions", d.estimate.deductionsCents], ["Net self-employment profit", d.estimate.netProfitCents], ["Net earnings (92.35%)", d.estimate.se.netEarningsCents], ["Social Security (12.4%, capped)", d.estimate.se.socialSecurityCents], ["Medicare (2.9%)", d.estimate.se.medicareCents], ["Additional Medicare (0.9%)", d.estimate.se.additionalMedicareCents], ["Self-employment tax total", d.estimate.se.totalCents], ["Half-SE deduction (excludes additional Medicare)", d.estimate.se.halfDeductionCents], ["Adjusted gross income", d.estimate.adjustedGrossIncomeCents], ["Standard deduction", d.estimate.standardDeductionCents], ["Taxable income before QBI", d.estimate.taxableBeforeQbiCents], ["QBI deduction (limited 20%)", d.estimate.qbi.deductionCents], ["Taxable income", d.estimate.federal.taxableIncomeCents], ["Federal income tax", d.estimate.federal.totalCents], ["Total federal liability", d.estimate.totalTaxCents],
-      ].map(([label, amount]) => <tr key={String(label)}><th>{label}</th><td className="numeric"><span className="money">{formatMoney(Number(amount))}</span></td></tr>)}</tbody></table></section>
-      <section className="panel"><h2>Quarterly plan</h2><p><span className="pill">{taxLabels?.method}</span></p><p className="muted small">Regular target: <span className="money">{formatMoney(d.schedule.regularCents)}</span> (100% of estimated tax). Prior-year target: <span className="money">{formatMoney(d.schedule.safeHarbourCents)}</span> ({d.schedule.safeHarbourBasisPoints / 100}% of prior-year tax). When enabled in Settings, the lower target is used.</p><div className="table-wrap"><table><thead><tr><th>Quarter / due</th><th className="numeric">Required</th><th className="numeric">Paid (allocated)</th><th>Status</th></tr></thead><tbody>{d.plan.quarters.map(q => <tr key={q.quarter}><td><strong>Q{q.quarter}</strong><small className="mono">{q.dueDate}</small></td><td className="numeric"><span className="money">{formatMoney(q.requiredCents)}</span></td><td className="numeric"><span className="money">{formatMoney(q.paidCents)}</span></td><td><span className={`status ${q.status === "PAST_DUE" ? "status-overdue" : q.status === "UPCOMING" ? "" : "status-paid"}`}>{q.status === "PAID" ? "Paid" : q.status === "COVERED_LATER" ? "Covered by later payment" : q.status === "PAST_DUE" ? <>Past due <span className="money">{formatMoney(q.currentShortfallCents)}</span></> : "Upcoming"}</span></td></tr>)}</tbody></table></div><p className="muted small">Paid shows the quarter each payment was allocated to. Status applies all payments made by the as-of date against cumulative targets. Past-due amounts overlap; do not add them together. Safe harbour affects payment targets; final tax can be higher.</p><p>Next due: <strong className="mono">{d.plan.nextDueDate ?? "No future dates in this schedule"}</strong>{d.plan.nextDueDate && <> - <span className="money">{formatMoney(d.plan.nextDueCents)}</span></>}</p><Link href="/estimated-payments" className="text-link">Manage recorded payments →</Link><h3 className="editor-section">Income tax brackets</h3><div className="table-wrap"><table><thead><tr><th>Rate</th><th className="numeric">Income in bracket</th><th className="numeric">Tax</th></tr></thead><tbody>{d.estimate.federal.brackets.map(b => <tr key={b.rateBasisPoints}><td>{b.rateBasisPoints / 100}%</td><td className="numeric"><span className="money">{formatMoney(b.taxableCents)}</span></td><td className="numeric"><span className="money">{formatMoney(b.taxCents)}</span></td></tr>)}</tbody></table></div></section></div>
-    </>}<Disclaimer />{record && <Modal title="Record estimated payment" close={() => setRecord(false)}><RecordForm entity="estimated-payments" done={() => { setRecord(false); resource.refresh(); }} close={() => setRecord(false)} /></Modal>}
-  </>;
+
+  const kpiCells: LedgerCellItem[] = d ? [
+    {
+      label: d.estimate.annualised ? "Projected annual tax" : "Tax on actual YTD earnings",
+      amountCents: d.estimate.totalTaxCents,
+      helperText: "Estimated federal tax before subtracting payments.",
+    },
+    {
+      label: "Paid so far",
+      amountCents: d.schedule.paidSoFarCents,
+      helperText: "Recorded payments for this tax year through the as-of date.",
+    },
+    {
+      label: taxLabels?.balance,
+      amountCents: d.schedule.estimatedBalanceCents,
+      helperText: taxLabels?.balanceHint,
+    },
+    {
+      label: taxLabels?.target,
+      amountCents: d.schedule.remainingCents,
+      helperText: taxLabels?.targetHint,
+      highlight: true,
+    },
+  ] : [];
+
+  return (
+    <>
+      <PageTitle
+        title="A clearer tax picture"
+        description="See how your business activity becomes a quarterly payment plan."
+        action={<button className="button" onClick={() => setRecord(true)}>Record payment</button>}
+      />
+      <div className="toolbar">
+        <label className="filter-label">Tax year<select aria-label="Tax year"><option>2026</option></select></label>
+        <label className="filter-label">As of<input type="date" min="2026-01-01" max={new Date().toISOString().slice(0, 10)} required value={asOf} onChange={e => setAsOf(e.target.value)} /></label>
+        <label className="checkbox-label"><input type="checkbox" checked={annualise} onChange={e => setAnnualise(e.target.checked)} />Annualise YTD figures</label>
+        <Link href="/settings" className="text-link">Filing status & safe harbour</Link>
+      </div>
+      {resource.loading && <Loading />}
+      {resource.error && <ErrorBox message={resource.error} retry={resource.refresh} />}
+      {d && (
+        <>
+          <p><span className="pill">{taxLabels?.method}</span></p>
+
+          <LedgerStrip cells={kpiCells} />
+
+          <div className="chart-grid">
+            <section className="panel">
+              <h2>Your calculation, line by line</h2>
+              <p className="muted small">
+                {d.estimate.annualised ? `YTD figures × ${d.estimate.yearDays} / ${d.estimate.elapsedDays} elapsed days` : "Actual YTD figures; no annualisation"} · {d.estimate.filingStatus.replaceAll("_", " ")}
+              </p>
+              <table className="breakdown">
+                <tbody>
+                  {[
+                    ["YTD income", d.estimate.ytdIncomeCents],
+                    ["YTD deductions", d.estimate.ytdDeductionsCents],
+                    ["Projected income", d.estimate.incomeCents],
+                    ["Projected deductions", d.estimate.deductionsCents],
+                    ["Net self-employment profit", d.estimate.netProfitCents],
+                    ["Net earnings (92.35%)", d.estimate.se.netEarningsCents],
+                    ["Social Security (12.4%, capped)", d.estimate.se.socialSecurityCents],
+                    ["Medicare (2.9%)", d.estimate.se.medicareCents],
+                    ["Additional Medicare (0.9%)", d.estimate.se.additionalMedicareCents],
+                    ["Self-employment tax total", d.estimate.se.totalCents],
+                    ["Half-SE deduction (excludes additional Medicare)", d.estimate.se.halfDeductionCents],
+                    ["Adjusted gross income", d.estimate.adjustedGrossIncomeCents],
+                    ["Standard deduction", d.estimate.standardDeductionCents],
+                    ["Taxable income before QBI", d.estimate.taxableBeforeQbiCents],
+                    ["QBI deduction (limited 20%)", d.estimate.qbi.deductionCents],
+                    ["Taxable income", d.estimate.federal.taxableIncomeCents],
+                    ["Federal income tax", d.estimate.federal.totalCents],
+                    ["Total federal liability", d.estimate.totalTaxCents],
+                  ].map(([label, amount]) => (
+                    <tr key={String(label)}>
+                      <th>{label}</th>
+                      <td className="numeric"><span className="money">{formatMoney(Number(amount))}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </section>
+
+            <section className="panel">
+              <h2>Quarterly plan</h2>
+              <p><span className="pill">{taxLabels?.method}</span></p>
+              <p className="muted small">
+                Regular target: <span className="money">{formatMoney(d.schedule.regularCents)}</span> (100% of estimated tax). Prior-year target: <span className="money">{formatMoney(d.schedule.safeHarbourCents)}</span> ({d.schedule.safeHarbourBasisPoints / 100}% of prior-year tax). When enabled in Settings, the lower target is used.
+              </p>
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Quarter / due</th>
+                      <th className="numeric">Required</th>
+                      <th className="numeric">Paid (allocated)</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {d.plan.quarters.map(q => (
+                      <tr key={q.quarter}>
+                        <td><strong>Q{q.quarter}</strong><small className="mono">{q.dueDate}</small></td>
+                        <td className="numeric"><span className="money">{formatMoney(q.requiredCents)}</span></td>
+                        <td className="numeric"><span className="money">{formatMoney(q.paidCents)}</span></td>
+                        <td>
+                          <span className={`status ${q.status === "PAST_DUE" ? "status-overdue" : q.status === "UPCOMING" ? "" : "status-paid"}`}>
+                            {q.status === "PAID" ? "Paid" : q.status === "COVERED_LATER" ? "Covered by later payment" : q.status === "PAST_DUE" ? <>Past due <span className="money">{formatMoney(q.currentShortfallCents)}</span></> : "Upcoming"}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="muted small">
+                Paid shows the quarter each payment was allocated to. Status applies all payments made by the as-of date against cumulative targets. Past-due amounts overlap; do not add them together. Safe harbour affects payment targets; final tax can be higher.
+              </p>
+              <p>
+                Next due: <strong className="mono">{d.plan.nextDueDate ?? "No future dates in this schedule"}</strong>
+                {d.plan.nextDueDate && <> - <span className="money">{formatMoney(d.plan.nextDueCents)}</span></>}
+              </p>
+              <Link href="/estimated-payments" className="text-link">Manage recorded payments →</Link>
+
+              <h3 className="editor-section">Income tax brackets</h3>
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Rate</th>
+                      <th className="numeric">Income in bracket</th>
+                      <th className="numeric">Tax</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {d.estimate.federal.brackets.map(b => (
+                      <tr key={b.rateBasisPoints}>
+                        <td>{b.rateBasisPoints / 100}%</td>
+                        <td className="numeric"><span className="money">{formatMoney(b.taxableCents)}</span></td>
+                        <td className="numeric"><span className="money">{formatMoney(b.taxCents)}</span></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+        </>
+      )}
+      <Disclaimer />
+      {record && (
+        <Modal title="Record estimated payment" close={() => setRecord(false)}>
+          <RecordForm entity="estimated-payments" done={() => { setRecord(false); resource.refresh(); }} close={() => setRecord(false)} />
+        </Modal>
+      )}
+    </>
+  );
 }

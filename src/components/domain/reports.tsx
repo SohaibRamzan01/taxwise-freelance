@@ -1,24 +1,180 @@
 ﻿"use client";
 import { useState } from "react";
+import Link from "next/link";
+import { FileText, Plus } from "lucide-react";
 import type { TaxSummary } from "@/lib/reports/summary";
 import { categoryColor } from "@/lib/category-colors";
 import type { CSSProperties } from "react";
 import { formatMoney } from "@/lib/money";
-import { Disclaimer, ErrorBox, Loading, PageTitle, useResource } from "./common";
+import { Disclaimer, Empty, ErrorBox, Loading, PageTitle, useResource } from "./common";
+
 export function ReportsPage() {
-  const [year, setYear] = useState("2026"); const [quarter, setQuarter] = useState("");
+  const [year, setYear] = useState("2026");
+  const [quarter, setQuarter] = useState("");
   const query = new URLSearchParams({ year, quarter });
   const url = `/api/reports/tax-summary?${query}`;
-  const resource = useResource<{ data: TaxSummary }>(`${url}&format=json`); const summary = resource.data?.data;
-  return <><PageTitle title="Reports" description="Review actual income and deductions, then download a tax-ready summary." />
-    <div className="toolbar"><label className="filter-label">Tax year<select value={year} onChange={e => setYear(e.target.value)}><option value="2026">2026</option></select></label><label className="filter-label">Period<select value={quarter} onChange={e => setQuarter(e.target.value)}><option value="">Full year</option>{[1, 2, 3, 4].map(q => <option key={q} value={q}>Quarter {q}</option>)}</select></label>
-    {summary && <div className="row-actions"><a className="button" href={url}>Download PDF</a><a className="button secondary" href={`${url}&format=csv`}>Download CSV</a></div>}</div>
-    {resource.loading && <Loading />}{resource.error && <ErrorBox message={resource.error} retry={resource.refresh} />}
-    {summary && <><p className="muted">{summary.period.from} to {summary.period.to} · Records through {summary.asOf}</p><div className="stats-grid">{[["Income", summary.incomeCents], ["Expenses", summary.expenseCents], ["Deductions", summary.deductionsCents], ["Net profit", summary.netProfitCents]].map(([label, amount]) => <div className="stat" key={label}><div className="stat-label">{label}</div><div className="stat-value"><span className="money">{formatMoney(Number(amount))}</span></div></div>)}</div>
-    <p className="disclaimer tax-note">{summary.calculationNote}</p>
-    <div className="panel table-wrap"><table role="table" aria-label="Expenses by category" className="record-table"><thead><tr><th scope="col">Category</th><th scope="col">Schedule C line</th><th scope="col">Entries</th><th scope="col" className="numeric">Expenses</th><th scope="col" className="numeric">Deductible</th></tr></thead><tbody>{summary.groups.map(group => <tr key={group.category}><td data-label="Category" className="record-heading"><span className="mobile-chip" style={{ "--category-color": categoryColor(group.category) } as CSSProperties}>{group.label}</span></td><td data-label="Schedule C line">{group.scheduleC}</td><td data-label="Entries">{group.count}</td><td data-label="Expenses" className="numeric out"><span className="money">{formatMoney(group.expenseCents)}</span></td><td data-label="Deductible" className="numeric"><span className="money">{formatMoney(group.deductibleCents)}</span></td></tr>)}</tbody></table></div>
-    <section className="panel editor-section"><h2>Period tax calculation</h2><dl className="report-numbers">{[["SE tax", summary.estimate.se.totalCents], ["Half-SE deduction", summary.estimate.se.halfDeductionCents], ["Standard deduction", summary.estimate.standardDeductionCents], ["QBI deduction", summary.estimate.qbi.deductionCents], ["Taxable income", summary.estimate.federal.taxableIncomeCents], ["Federal income tax", summary.estimate.federal.totalCents], ["Total estimated federal tax", summary.estimate.totalTaxCents], ["Payments assigned to period", summary.paymentsCents]].map(([label, amount]) => <div key={label}><dt>{label}</dt><dd><span className="money">{formatMoney(Number(amount))}</span></dd></div>)}</dl></section>
-    <section className="panel editor-section"><h2>Tax-year payment plan</h2><p className="muted small">YTD actual earnings, no annualisation · {summary.schedule.method.replaceAll("_", " ")}</p><dl className="report-numbers"><div><dt>All tax-year payments</dt><dd><span className="money">{formatMoney(summary.schedule.paidSoFarCents)}</span></dd></div><div><dt>Remaining payment target</dt><dd><span className="money">{formatMoney(summary.schedule.remainingCents)}</span></dd></div><div><dt>Estimated tax balance</dt><dd><span className="money">{formatMoney(summary.schedule.estimatedBalanceCents)}</span></dd></div></dl><div className="table-wrap"><table><thead><tr><th scope="col">Quarter</th><th scope="col">Due date</th><th scope="col" className="numeric">Target</th><th scope="col" className="numeric">Paid</th><th scope="col" className="numeric">Cumulative remaining</th></tr></thead><tbody>{summary.schedule.quarters.map(q => <tr key={q.quarter}><td>Q{q.quarter}</td><td className="mono">{q.dueDate}</td><td className="numeric"><span className="money">{formatMoney(q.requiredCents)}</span></td><td className="numeric"><span className="money">{formatMoney(q.paidCents)}</span></td><td className="numeric"><span className="money">{formatMoney(q.remainingCents)}</span></td></tr>)}</tbody></table></div></section></>}
-    <Disclaimer /><p className="muted small">Schedule C labels are planning mappings. Hardware may require capitalization or depreciation; review deduction treatment with a tax professional.</p>
-  </>;
+  const resource = useResource<{ data: TaxSummary }>(`${url}&format=json`);
+  const summary = resource.data?.data;
+
+  return (
+    <>
+      <PageTitle
+        title="Reports"
+        description="Review actual income and deductions, then download a tax-ready summary."
+      />
+      <div className="toolbar">
+        <label className="filter-label">
+          Tax year
+          <select value={year} onChange={e => setYear(e.target.value)}>
+            <option value="2026">2026</option>
+          </select>
+        </label>
+        <label className="filter-label">
+          Period
+          <select value={quarter} onChange={e => setQuarter(e.target.value)}>
+            <option value="">Full year</option>
+            {[1, 2, 3, 4].map(q => <option key={q} value={q}>Quarter {q}</option>)}
+          </select>
+        </label>
+        {summary && (
+          <div className="row-actions">
+            <a className="button" href={url}>Download PDF</a>
+            <a className="button secondary" href={`${url}&format=csv`}>Download CSV</a>
+          </div>
+        )}
+      </div>
+
+      {resource.loading && <Loading />}
+      {resource.error && <ErrorBox message={resource.error} retry={resource.refresh} />}
+
+      {summary && (
+        <>
+          <p className="muted">
+            {summary.period.from} to {summary.period.to} · Records through {summary.asOf}
+          </p>
+          <div className="stats-grid">
+            {[
+              ["Income", summary.incomeCents],
+              ["Expenses", summary.expenseCents],
+              ["Deductions", summary.deductionsCents],
+              ["Net profit", summary.netProfitCents],
+            ].map(([label, amount]) => (
+              <div className="stat" key={label}>
+                <div className="stat-label">{label}</div>
+                <div className="stat-value"><span className="money">{formatMoney(Number(amount))}</span></div>
+              </div>
+            ))}
+          </div>
+          <p className="disclaimer tax-note">{summary.calculationNote}</p>
+
+          {summary.groups.length > 0 ? (
+            <div className="panel table-wrap">
+              <table role="table" aria-label="Expenses by category" className="record-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Category</th>
+                    <th scope="col">Schedule C line</th>
+                    <th scope="col">Entries</th>
+                    <th scope="col" className="numeric">Expenses</th>
+                    <th scope="col" className="numeric">Deductible</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {summary.groups.map(group => (
+                    <tr key={group.category}>
+                      <td data-label="Category" className="record-heading">
+                        <span className="mobile-chip" style={{ "--category-color": categoryColor(group.category) } as CSSProperties}>
+                          {group.label}
+                        </span>
+                      </td>
+                      <td data-label="Schedule C line">{group.scheduleC}</td>
+                      <td data-label="Entries">{group.count}</td>
+                      <td data-label="Expenses" className="numeric">
+                        <span className="money">{formatMoney(group.expenseCents)}</span>
+                      </td>
+                      <td data-label="Deductible" className="numeric">
+                        <span className="money">{formatMoney(group.deductibleCents)}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <Empty
+              icon={FileText}
+              title="No expenses recorded for this period"
+              message="Record your business expenses to see them mapped to Schedule C deduction lines."
+              action={
+                <Link href="/expenses" className="button">
+                  <Plus size={16} />Add an expense
+                </Link>
+              }
+            />
+          )}
+
+          <section className="panel editor-section">
+            <h2>Period tax calculation</h2>
+            <dl className="report-numbers">
+              {[
+                ["SE tax", summary.estimate.se.totalCents],
+                ["Half-SE deduction", summary.estimate.se.halfDeductionCents],
+                ["Standard deduction", summary.estimate.standardDeductionCents],
+                ["QBI deduction", summary.estimate.qbi.deductionCents],
+                ["Taxable income", summary.estimate.federal.taxableIncomeCents],
+                ["Federal income tax", summary.estimate.federal.totalCents],
+                ["Total estimated federal tax", summary.estimate.totalTaxCents],
+                ["Payments assigned to period", summary.paymentsCents],
+              ].map(([label, amount]) => (
+                <div key={label}>
+                  <dt>{label}</dt>
+                  <dd><span className="money">{formatMoney(Number(amount))}</span></dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+
+          <section className="panel editor-section">
+            <h2>Tax-year payment plan</h2>
+            <p className="muted small">
+              YTD actual earnings, no annualisation · {summary.schedule.method.replaceAll("_", " ")}
+            </p>
+            <dl className="report-numbers">
+              <div><dt>All tax-year payments</dt><dd><span className="money">{formatMoney(summary.schedule.paidSoFarCents)}</span></dd></div>
+              <div><dt>Remaining payment target</dt><dd><span className="money">{formatMoney(summary.schedule.remainingCents)}</span></dd></div>
+              <div><dt>Estimated tax balance</dt><dd><span className="money">{formatMoney(summary.schedule.estimatedBalanceCents)}</span></dd></div>
+            </dl>
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">Quarter</th>
+                    <th scope="col">Due date</th>
+                    <th scope="col" className="numeric">Target</th>
+                    <th scope="col" className="numeric">Paid</th>
+                    <th scope="col" className="numeric">Cumulative remaining</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {summary.schedule.quarters.map(q => (
+                    <tr key={q.quarter}>
+                      <td>Q{q.quarter}</td>
+                      <td className="mono">{q.dueDate}</td>
+                      <td className="numeric"><span className="money">{formatMoney(q.requiredCents)}</span></td>
+                      <td className="numeric"><span className="money">{formatMoney(q.paidCents)}</span></td>
+                      <td className="numeric"><span className="money">{formatMoney(q.remainingCents)}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </>
+      )}
+      <Disclaimer />
+      <p className="muted small">
+        Schedule C labels are planning mappings. Hardware may require capitalization or depreciation; review deduction treatment with a tax professional.
+      </p>
+    </>
+  );
 }

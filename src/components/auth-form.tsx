@@ -38,7 +38,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   }
 
   return <form className="auth-form" onSubmit={submit} aria-busy={pending}>
-    <span className="eyebrow">Your business starts with you</span><h1>{signup ? "Make yourself at home." : "Welcome back."}</h1><p className="muted">{signup ? "Create your account and bring your finances together." : "A little clarity for your next big move."}</p>
+    <h1>{signup ? "Make yourself at home." : "Welcome back."}</h1><p className="muted">{signup ? "Create your account and bring your finances together." : "A little clarity for your next big move."}</p>
     {signup && <><label htmlFor="name">Full name</label><input id="name" name="name" autoComplete="name" placeholder="Alex Morgan" required minLength={2} maxLength={100} /></>}
     <label htmlFor="email">Email address</label><input id="email" name="email" type="email" autoComplete="email" placeholder="you@yourbusiness.com" required maxLength={254} />
     <label htmlFor="password">Password</label><div className="password-input"><input id="password" name="password" type={showPassword ? "text" : "password"} autoComplete={signup ? "new-password" : "current-password"} required minLength={signup ? 12 : 1} maxLength={72} aria-describedby={signup ? "password-hint" : undefined} /><button type="button" aria-label={showPassword ? "Hide password" : "Show password"} aria-pressed={showPassword} onClick={() => setShowPassword(!showPassword)}>{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button></div>

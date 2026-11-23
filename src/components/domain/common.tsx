@@ -37,14 +37,31 @@ export function useResource<T>(url: string) {
   return { data: state.key === key ? state.data : undefined, error: state.key === key ? state.error : undefined, loading: state.key !== key, refresh: () => setRevision(n => n + 1) };
 }
 export function PageTitle({ title, description, action }: { title: string; description: string; action?: React.ReactNode }) {
-  return <div className="page-title page-top"><div><span className="eyebrow">Your business, in focus</span><h1>{title}</h1><p>{description}</p></div>{action}</div>;
+  return <div className="page-title page-top"><div><h1>{title}</h1><p>{description}</p></div>{action}</div>;
 }
 export function ErrorBox({ message, retry }: { message: string; retry?: () => void }) {
   return <div className="error-message" role="alert">{message}{retry && <button className="text-button" onClick={retry}>Try again</button>}</div>;
 }
 export function Loading() { return <div className="panel loading" role="status" aria-label="Loading your workspace"><div className="skeleton skeleton-title" /><div className="skeleton" /><div className="skeleton" /><div className="skeleton" /><span className="sr-only">Loading your workspace…</span></div>; }
-export function Empty({ title = "Nothing here yet", message = "Add your first entry to get started." }: { title?: string; message?: string }) {
-  return <div className="empty-panel"><span className="eyebrow">A fresh start</span><h2>{title}</h2><p>{message}</p></div>;
+export function Empty({
+  title = "Nothing here yet",
+  message = "Add your first entry to get started.",
+  action,
+  icon: Icon,
+}: {
+  title?: string;
+  message?: string;
+  action?: React.ReactNode;
+  icon?: React.ComponentType<{ size?: number; className?: string; "aria-hidden"?: boolean | "true" | "false" }>;
+}) {
+  return (
+    <div className="empty-panel">
+      {Icon && <div className="empty-icon" aria-hidden="true"><Icon size={24} /></div>}
+      <h2>{title}</h2>
+      <p>{message}</p>
+      {action && <div className="empty-action">{action}</div>}
+    </div>
+  );
 }
 export function Modal({ title, children, close }: { title: string; children: React.ReactNode; close: () => void }) {
   const ref = useRef<HTMLDialogElement>(null);
