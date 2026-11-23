@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { AI_TIMEOUT_MS, categorizeExpense, DEFAULT_GEMINI_MODEL } from ".";
+import { AI_TIMEOUT_MS, categorizeExpense, DEFAULT_GEMINI_MODEL, FALLBACK_GEMINI_MODELS } from ".";
 const fetchMock = vi.fn();
 const input = { vendor: "Adobe", description: "Design tools", amount: 2999 };
 let errorLog: ReturnType<typeof vi.spyOn>;
@@ -32,6 +32,21 @@ describe("expense AI boundary", () => {
     vi.stubEnv("GEMINI_MODEL", "../evil?x=1");
     await categorizeExpense(input);
     expect(fetchMock.mock.calls[1][0]).toContain(`/models/${DEFAULT_GEMINI_MODEL}:generateContent`);
+  });
+  it("tries the fallback models when the main model is overloaded or missing", async () => {
+    fetchMock
+      .mockResolvedValueOnce(Response.json({ error: { status: "UNAVAILABLE", message: "high demand" } }, { status: 503 }))
+      .mockResolvedValueOnce(Response.json({ error: { status: "NOT_FOUND", message: "no model" } }, { status: 404 }))
+      .mockResolvedValueOnce(Response.json(envelope({ category: "ADVERTISING", confidence: .8 })));
+    expect(await categorizeExpense(input)).toEqual({ category: "ADVERTISING", confidence: .8, source: "ai" });
+    expect(fetchMock.mock.calls.map(call => String(call[0]).split("/models/")[1])).toEqual([DEFAULT_GEMINI_MODEL, ...FALLBACK_GEMINI_MODELS].map(m => `${m}:generateContent`));
+    expect(errorLog).toHaveBeenCalledTimes(2);
+  });
+  it("does not retry on errors other models cannot fix, and falls back to rules when every model is busy", async () => {
+    fetchMock.mockResolvedValueOnce(Response.json({ error: { status: "PERMISSION_DENIED", message: "bad key" } }, { status: 403 }));
+    expect((await categorizeExpense(input)).source).toBe("rules"); expect(fetchMock).toHaveBeenCalledTimes(1);
+    fetchMock.mockReset(); fetchMock.mockImplementation(async () => Response.json({ error: { status: "UNAVAILABLE" } }, { status: 503 }));
+    expect((await categorizeExpense(input)).source).toBe("rules"); expect(fetchMock).toHaveBeenCalledTimes(1 + FALLBACK_GEMINI_MODELS.length);
   });
   it("ignores thought parts and signature-only parts in the response", async () => {
     fetchMock.mockResolvedValue(Response.json({ candidates: [{ content: { parts: [{ text: "reasoning", thought: true }, { thoughtSignature: "abc" }, { text: JSON.stringify({ category: "TRAVEL", confidence: .85 }) }] } }] }));
